@@ -7,3 +7,5 @@ Team Comp:
 Ampi
 Manuel
 Alex
+
+You can access IEEE papers with your Girona account.
