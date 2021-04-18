@@ -62,8 +62,8 @@ if __name__ == '__main__':
         x_train.append(patient.images)
         y_train.append(patient.ground_truth)
     
-    x_train = [image for sublist in x_train for image in sublist]
-    y_train = [image for sublist in y_train for image in sublist]
+    x_train_arr = np.array([image for sublist in x_train for image in sublist])
+    y_train_arr = np.array([image for sublist in y_train for image in sublist])
     
     #%% RESNET
     from sklearn.pipeline import Pipeline
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     #                  }
     #                 ]
     
-    model_resnet.fit(x_train, y = y_train)
+    model_resnet.fit(x_train_arr, y = y_train_arr)
 
     
     gc.collect()
