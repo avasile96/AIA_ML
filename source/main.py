@@ -14,6 +14,9 @@ from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import load_img
 import keras
 
+img_size = (240, 240)
+num_classes = 2
+batch_size = 32
 
 class patient:
     def __init__(self, index):
@@ -47,6 +50,22 @@ class IrisImageDatabase(keras.utils.Sequence):
             # Ground truth labels are 1, 2, 3. Subtract one to make them 0, 1, 2:
             y[j] -= 1
         return x, y
+    
+    def import_data(dataset_dir):
+        gt_dir = os.path.join(dataset_dir, 'groundtruth')
+        patients_dir = os.path.join(dataset_dir, 'images')
+
+        for patient_index in os.listdir(patients_dir):
+            if os.path.isdir(os.path.join(patients_dir, patient_index)):
+
+                p = patient(patient_index)
+                p.images = loadImages(os.path.join(patients_dir, patient_index))
+                for name in os.listdir(gt_dir):
+                    if patient_index in name:
+                        gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
+                p.ground_truth = gt
+                patients.append(p)
+    return x, y
 
 def loadImages(path):
     # return array of images from a directory (specified by "path")
@@ -177,10 +196,8 @@ if __name__ == '__main__':
     val_target_img_paths = target_img_paths[-val_samples:]
     
     # Instantiate data Sequences for each split
-    train_gen = OxfordPets(
-        batch_size, img_size, train_input_img_paths, train_target_img_paths
-    )
-    val_gen = OxfordPets(batch_size, img_size, val_input_img_paths, val_target_img_paths)
+    train_gen = OxfordPets(batch_size, img_size, train_input_img_paths, train_target_img_paths)
+    val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
     
     #%% U-Net
     # Free up RAM in case the model definition cells were run multiple times
