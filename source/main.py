@@ -15,18 +15,17 @@ class patient:
     def __init__(self, index):
         self.index = index
 
-
 def loadImages(path):
     # return array of images from a directory (specified by "path")
     imagesList = os.listdir(path)
     loadedImages = []
     for image in imagesList:
-        img = io.imread(os.path.join(path, image))
+        img = io.imread(os.path.join(path, image), as_gray = True)
         loadedImages.append(img)
     return loadedImages
 
 def import_data(dataset_dir):
-    # import ground truth and images (images are incorporated into the "patient" object)
+    # import ground truth and images (incorporated into the "patient" object)
     gt_dir = os.path.join(dataset_dir, 'groundtruth')
     patients_dir = os.path.join(dataset_dir, 'images')
     
@@ -38,7 +37,7 @@ def import_data(dataset_dir):
             p.images = loadImages(os.path.join(patients_dir, patient_index))
             for name in os.listdir(gt_dir):
                 if patient_index in name:
-                    gt.append(io.imread(os.path.join(gt_dir, name)))
+                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = True))
             p.ground_truth = gt
             patients.append(p)
     return patients
@@ -52,7 +51,7 @@ if __name__ == '__main__':
 
     patients = import_data(dataset_dir)
     
+    io.imshow(np.subtract(patients[0].images[0],
+              np.multiply(patients[0].images[0], patients[0].ground_truth[0]))) # test that shows red iris
     
     gc.collect()
-
-    
