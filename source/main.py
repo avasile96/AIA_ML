@@ -10,6 +10,10 @@ import gc
 import numpy as np
 from skimage import io
 import tensorflow as tf
+from tensorflow.keras import layers
+from tensorflow.keras.preprocessing.image import load_img
+import keras
+
 
 class patient:
     def __init__(self, index):
@@ -20,7 +24,7 @@ def loadImages(path):
     imagesList = os.listdir(path)
     loadedImages = []
     for image in imagesList:
-        img = io.imread(os.path.join(path, image), as_gray = True)
+        img = io.imread(os.path.join(path, image), as_gray = False)
         loadedImages.append(img)
     return loadedImages
 
@@ -37,11 +41,10 @@ def import_data(dataset_dir):
             p.images = loadImages(os.path.join(patients_dir, patient_index))
             for name in os.listdir(gt_dir):
                 if patient_index in name:
-                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = True))
+                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
             p.ground_truth = gt
             patients.append(p)
     return patients
-
 
 if __name__ == '__main__':
     
@@ -51,10 +54,10 @@ if __name__ == '__main__':
 
     patients = import_data(dataset_dir)
     
-    io.imshow(np.subtract(patients[0].images[0],
-              np.multiply(patients[0].images[0], patients[0].ground_truth[0]))) # test that shows red iris
     
     #%% Preparing training set
+    from skimage.transform import rescale, resize, downscale_local_mean
+    from skimage.color import gray2rgb
     x_train = []
     y_train = []
     
@@ -63,32 +66,25 @@ if __name__ == '__main__':
         y_train.append(patient.ground_truth)
     
     x_train_arr = np.array([image for sublist in x_train for image in sublist])
-    y_train_arr = np.array([image for sublist in y_train for image in sublist])
+    y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
     
-    #%% RESNET
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler, MinMaxScaler
-    from sklearn.model_selection import GridSearchCV, StratifiedKFold
+    # Downsampling routine (if needed)
+    # x_train_arr_ds = []
+    # y_train_arr_ds = []
     
-    # pipe_resnet = Pipeline([
-    #                         ("classifier_resnet", tf.keras.applications.ResNet50())
-    #                         ])
+    # x_train_arr_ds = np.array([resize(image, [224,224]) for image in x_train_arr])
+    # y_train_arr_ds = np.array([resize(image, [224,224]) for image in y_train_arr])
     
-    model_resnet = tf.keras.applications.ResNet50()
-    model_resnet.compile(optimizer='adam', loss='mse', metrics='accuracy')
+    #%% VALIDATION SPLIT
+    import random
     
-    # grid_params = [
-    #                 {"classifier": [tf.keras.applications.ResNet50()],
-    #                   "classifier__include_top": [True],
-    #                   "classifier__weights":['imagenet'],
-    #                   "classifier__input_tensor":[1e-3],
-    #                   "classifier__input_shape": [-1],
-    #                   "classifier__pooling":[None],
-    #                   "classifier__classes":[1000],
-    #                  }
-    #                 ]
-    
-    model_resnet.fit(x_train_arr, y = y_train_arr)
 
     
-    gc.collect()
+    #%% MODEL TRAINING
+    
+    foo = (np.subtract(x_train_arr,
+           np.multiply(x_train_arr, y_train_arr))) # test that shows red iris
+    io.imshow(foo[0])
+    
+    #%% METRICS & PLOTWORK
+
