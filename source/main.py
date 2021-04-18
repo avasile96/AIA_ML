@@ -9,7 +9,7 @@ import os
 import gc
 import numpy as np
 from skimage import io
-
+import tensorflow as tf
 
 class patient:
     def __init__(self, index):
@@ -53,5 +53,42 @@ if __name__ == '__main__':
     
     io.imshow(np.subtract(patients[0].images[0],
               np.multiply(patients[0].images[0], patients[0].ground_truth[0]))) # test that shows red iris
+    
+    #%% Preparing training set
+    x_train = []
+    y_train = []
+    
+    for patient in patients:
+        x_train.append(patient.images)
+        y_train.append(patient.ground_truth)
+    
+    x_train = [image for sublist in x_train for image in sublist]
+    y_train = [image for sublist in y_train for image in sublist]
+    
+    #%% RESNET
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler
+    from sklearn.model_selection import GridSearchCV, StratifiedKFold
+    
+    # pipe_resnet = Pipeline([
+    #                         ("classifier_resnet", tf.keras.applications.ResNet50())
+    #                         ])
+    
+    model_resnet = tf.keras.applications.ResNet50()
+    model_resnet.compile(optimizer='adam', loss='mse', metrics='accuracy')
+    
+    # grid_params = [
+    #                 {"classifier": [tf.keras.applications.ResNet50()],
+    #                   "classifier__include_top": [True],
+    #                   "classifier__weights":['imagenet'],
+    #                   "classifier__input_tensor":[1e-3],
+    #                   "classifier__input_shape": [-1],
+    #                   "classifier__pooling":[None],
+    #                   "classifier__classes":[1000],
+    #                  }
+    #                 ]
+    
+    model_resnet.fit(x_train, y = y_train)
+
     
     gc.collect()
