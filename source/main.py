@@ -22,6 +22,53 @@ class patient:
     def __init__(self, index):
         self.index = index
 
+def loadImages(path):
+    # return array of images from a directory (specified by "path")
+    imagesList = os.listdir(path)
+    loadedImages = []
+    for image in imagesList:
+        img = io.imread(os.path.join(path, image), as_gray = False)
+        loadedImages.append(img)
+    return loadedImages
+
+def downsample(img_arr, desired_dimesion = [224, 224]):
+    # Downsampling routine for stacks of images
+    # img arr = array of images to which you want to apply the downsampling
+    # desired_dimension = tuple of new dimension of the images
+    img_arr_ds = np.array([resize(image, desired_dimesion) for image in img_arr])
+    return img_arr_ds
+
+def create_patients(dataset_dir):
+    # create list of patients containing images from dataset
+    gt_dir = os.path.join(dataset_dir, 'groundtruth')
+    patients_dir = os.path.join(dataset_dir, 'images')
+    patients = []
+    for patient_index in os.listdir(patients_dir):
+        if os.path.isdir(os.path.join(patients_dir, patient_index)):
+            gt = []
+            p = patient(patient_index)
+            p.images = loadImages(os.path.join(patients_dir, patient_index))
+            for name in os.listdir(gt_dir):
+                if patient_index in name:
+                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
+            p.ground_truth = gt
+            patients.append(p)
+    return patients
+
+def im_data_extract(list_of_patients):
+    # Extracting images from patients
+    # list_of_patients = list of patient objeccts
+    x_train = []
+    y_train = []
+    for patient in patients:
+        x_train.append(patient.images)
+        y_train.append(patient.ground_truth)
+        
+    x_train_arr = np.array([gray2rgb(image) for sublist in x_train for image in sublist])
+    y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
+    
+    return x_train_arr, y_train_arr
+
 class IrisImageDatabase(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
 
@@ -50,22 +97,6 @@ class IrisImageDatabase(keras.utils.Sequence):
             # Ground truth labels are 1, 2, 3. Subtract one to make them 0, 1, 2:
             y[j] -= 1
         return x, y
-    
-    def import_data(dataset_dir):
-        gt_dir = os.path.join(dataset_dir, 'groundtruth')
-        patients_dir = os.path.join(dataset_dir, 'images')
-
-        for patient_index in os.listdir(patients_dir):
-            if os.path.isdir(os.path.join(patients_dir, patient_index)):
-
-                p = patient(patient_index)
-                p.images = loadImages(os.path.join(patients_dir, patient_index))
-                for name in os.listdir(gt_dir):
-                    if patient_index in name:
-                        gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
-                p.ground_truth = gt
-                patients.append(p)
-    return x, y
 
 def get_model(img_size, num_classes):
     inputs = keras.Input(shape=img_size + (3,))
