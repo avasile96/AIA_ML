@@ -76,6 +76,10 @@ if __name__ == '__main__':
     
     patients = create_patients(dataset_dir) # list of patients
     
+    #%% TRADITIONAL IMAGE PROCESSING
+    
+    #%% FEATURE EXTRACTION
+    
     #%% Preparing training set
     x_train_arr, y_train_arr = im_data_extract(patients) # creating training data
     
@@ -94,4 +98,7 @@ if __name__ == '__main__':
     io.imshow(foo[0])
     
     #%% METRICS & PLOTWORK
+
+
+
 
