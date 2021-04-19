@@ -18,6 +18,10 @@ img_size = (240, 240)
 num_classes = 2
 batch_size = 32
 
+source_dir = os.path.dirname(os.path.abspath(__name__))
+project_dir = os.path.dirname(source_dir)
+dataset_dir = os.path.join(project_dir, 'dataset')
+    
 class patient:
     def __init__(self, index):
         self.index = index
@@ -158,34 +162,16 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
-    source_dir = os.path.dirname(os.path.abspath(__name__))
-    project_dir = os.path.dirname(source_dir)
-    dataset_dir = os.path.join(project_dir, 'dataset')
-
-    patients = import_data(dataset_dir)
-    
-    # io.imshow(np.subtract(patients[0].images[0],
-    #           np.multiply(patients[0].images[0], patients[0].ground_truth[0]))) # test that shows red iris
+    patients = create_patients(dataset_dir)
     
     #%% Preparing training set
     from skimage.transform import rescale, resize, downscale_local_mean
     from skimage.color import gray2rgb
-    x_train = []
-    y_train = []
     
-    for patient in patients:
-        x_train.append(patient.images)
-        y_train.append(patient.ground_truth)
+    x_train_arr, y_train_arr = im_data_extract(patients)
     
-    x_train_arr = np.array([image for sublist in x_train for image in sublist])
-    y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
-    
-    # Downsampling routine (if needed)
-    # x_train_arr_ds = []
-    # y_train_arr_ds = []
-    
-    # x_train_arr_ds = np.array([resize(image, [224,224]) for image in x_train_arr])
-    # y_train_arr_ds = np.array([resize(image, [224,224]) for image in y_train_arr])
+    # x_train_arr_ds = downsample(x_train_arr)
+    # y_train_arr_ds = downsample(y_train_arr)
     
     #%% VALIDATION SPLIT
     import random
