@@ -10,7 +10,7 @@ import tensorflow as tf
 
     
     resnet_model = tf.keras.applications.ResNet50(
-        include_top=True,
+        include_top=False,
         weights="imagenet",
         input_tensor=None,
         input_shape=None,
