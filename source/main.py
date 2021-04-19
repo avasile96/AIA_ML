@@ -13,8 +13,13 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import load_img
 import keras
+from skimage.transform import rescale, resize, downscale_local_mean
+from skimage.color import gray2rgb
 
-
+source_dir = os.path.dirname(os.path.abspath(__name__))
+project_dir = os.path.dirname(source_dir)
+dataset_dir = os.path.join(project_dir, 'dataset')
+    
 class patient:
     def __init__(self, index):
         self.index = index
@@ -28,11 +33,17 @@ def loadImages(path):
         loadedImages.append(img)
     return loadedImages
 
-def import_data(dataset_dir):
-    # import ground truth and images (incorporated into the "patient" object)
+def downsample(img_arr, desired_dimesion = [224, 224]):
+    # Downsampling routine for stacks of images
+    # img arr = array of images to which you want to apply the downsampling
+    # desired_dimension = tuple of new dimension of the images
+    img_arr_ds = np.array([resize(image, desired_dimesion) for image in img_arr])
+    return img_arr_ds
+
+def create_patients(dataset_dir):
+    # create list of patients containing images from dataset
     gt_dir = os.path.join(dataset_dir, 'groundtruth')
     patients_dir = os.path.join(dataset_dir, 'images')
-    
     patients = []
     for patient_index in os.listdir(patients_dir):
         if os.path.isdir(os.path.join(patients_dir, patient_index)):
@@ -46,34 +57,30 @@ def import_data(dataset_dir):
             patients.append(p)
     return patients
 
-if __name__ == '__main__':
-    
-    source_dir = os.path.dirname(os.path.abspath(__name__))
-    project_dir = os.path.dirname(source_dir)
-    dataset_dir = os.path.join(project_dir, 'dataset')
-
-    patients = import_data(dataset_dir)
-    
-    
-    #%% Preparing training set
-    from skimage.transform import rescale, resize, downscale_local_mean
-    from skimage.color import gray2rgb
+def im_data_extract(list_of_patients):
+    # Extracting images from patients
+    # list_of_patients = list of patient objeccts
     x_train = []
     y_train = []
-    
     for patient in patients:
         x_train.append(patient.images)
         y_train.append(patient.ground_truth)
-    
-    x_train_arr = np.array([image for sublist in x_train for image in sublist])
+        
+    x_train_arr = np.array([gray2rgb(image) for sublist in x_train for image in sublist])
     y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
     
-    # Downsampling routine (if needed)
-    # x_train_arr_ds = []
-    # y_train_arr_ds = []
+    return x_train_arr, y_train_arr
+        
+
+if __name__ == '__main__':
     
-    # x_train_arr_ds = np.array([resize(image, [224,224]) for image in x_train_arr])
-    # y_train_arr_ds = np.array([resize(image, [224,224]) for image in y_train_arr])
+    patients = create_patients(dataset_dir) # list of patients
+    
+    #%% Preparing training set
+    x_train_arr, y_train_arr = im_data_extract(patients) # creating training data
+    
+    # x_train_arr_ds = downsample(x_train_arr)
+    # y_train_arr_ds = downsample(y_train_arr)
     
     #%% VALIDATION SPLIT
     import random
