@@ -204,6 +204,7 @@ if __name__ == '__main__':
     keras.backend.clear_session()
 
     # Build model
+    
     model = get_model(img_size, num_classes)
     model.summary()
     
