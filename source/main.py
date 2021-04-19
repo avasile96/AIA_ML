@@ -67,33 +67,6 @@ class IrisImageDatabase(keras.utils.Sequence):
                 patients.append(p)
     return x, y
 
-def loadImages(path):
-    # return array of images from a directory (specified by "path")
-    imagesList = os.listdir(path)
-    loadedImages = []
-    for image in imagesList:
-        img = io.imread(os.path.join(path, image), as_gray = False)
-        loadedImages.append(img)
-    return loadedImages
-
-def import_data(dataset_dir):
-    # import ground truth and images (incorporated into the "patient" object)
-    gt_dir = os.path.join(dataset_dir, 'groundtruth')
-    patients_dir = os.path.join(dataset_dir, 'images')
-    
-    patients = []
-    for patient_index in os.listdir(patients_dir):
-        if os.path.isdir(os.path.join(patients_dir, patient_index)):
-            gt = []
-            p = patient(patient_index)
-            p.images = loadImages(os.path.join(patients_dir, patient_index))
-            for name in os.listdir(gt_dir):
-                if patient_index in name:
-                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
-            p.ground_truth = gt
-            patients.append(p)
-    return patients
-
 def get_model(img_size, num_classes):
     inputs = keras.Input(shape=img_size + (3,))
 
