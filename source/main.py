@@ -21,6 +21,20 @@ batch_size = 32
 source_dir = os.path.dirname(os.path.abspath(__name__))
 project_dir = os.path.dirname(source_dir)
 dataset_dir = os.path.join(project_dir, 'dataset')
+
+input_img_paths = []
+for patient_index in os.listdir(os.path.join(dataset_dir, 'images')):
+    if os.path.isdir(os.path.join(dataset_dir, 'images', patient_index)):
+        # patient_dir = os.path.join(dataset_dir, 'images', patient_index)
+        for fname in os.listdir(os.path.join(dataset_dir, 'images', patient_index)):
+            if fname.endswith(".bmp") and not fname.startswith("."):
+                input_img_paths.append(os.path.join(dataset_dir, 'images', patient_index, fname))
+
+target_img_paths = [
+        os.path.join(dataset_dir, 'groundtruth', fname)
+        for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
+        if fname.endswith(".tiff") and not fname.startswith(".")]
+
     
 class patient:
     def __init__(self, index):
@@ -168,39 +182,42 @@ if __name__ == '__main__':
     from skimage.transform import rescale, resize, downscale_local_mean
     from skimage.color import gray2rgb
     
-    x_train_arr, y_train_arr = im_data_extract(patients)
+    # x_train_arr, y_train_arr = im_data_extract(patients)
     
     # x_train_arr_ds = downsample(x_train_arr)
     # y_train_arr_ds = downsample(y_train_arr)
     
     #%% VALIDATION SPLIT
     import random
-    
-    # Split our img paths into a training and a validation set
-    val_samples = np.floor(x_train_arr.shape[0] * 40/100)
-    random.Random(1337).shuffle(x_train_arr)
-    random.Random(1337).shuffle(y_train_arr)
+
+# Split our img paths into a training and a validation set
+    val_samples = 1000
+    random.Random(1337).shuffle(input_img_paths)
+    random.Random(1337).shuffle(target_img_paths)
     train_input_img_paths = input_img_paths[:-val_samples]
     train_target_img_paths = target_img_paths[:-val_samples]
     val_input_img_paths = input_img_paths[-val_samples:]
     val_target_img_paths = target_img_paths[-val_samples:]
     
     # Instantiate data Sequences for each split
-    train_gen = OxfordPets(batch_size, img_size, train_input_img_paths, train_target_img_paths)
+    train_gen = IrisImageDatabase(
+        batch_size, img_size, train_input_img_paths, train_target_img_paths
+    )
     val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
+
     
     #%% U-Net
-    # Free up RAM in case the model definition cells were run multiple times
-    keras.backend.clear_session()
-
-    # Build model
-    
-    model = get_model(img_size, num_classes)
-    model.summary()
-    
     # Configure the model for training.
     # We use the "sparse" version of categorical_crossentropy
     # because our target data is integers.
+    
+    # Free up RAM in case the model definition cells were run multiple times
+    keras.backend.clear_session()
+    
+    # Build model
+    model = get_model(img_size, num_classes)
+    model.summary()
+        
     model.compile(optimizer="rmsprop", loss="sparse_categorical_crossentropy")
     
     callbacks = [
@@ -210,4 +227,5 @@ if __name__ == '__main__':
     # Train the model, doing validation at the end of each epoch.
     epochs = 15
     model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks)
+
 
