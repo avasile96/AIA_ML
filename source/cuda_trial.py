@@ -1,41 +1,51 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 21 19:15:59 2021
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 
-@author: vasil
-"""
+# Input data files are available in the "../input/" directory.
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
 
-import numpy as np
-
-a = np.array([1, 2, 3, 4])
-b = np.array([10, 20, 30, 40])
-
-np.add(a, b)
-
-np.add(a, 100)
-
-c = np.arange(4*4).reshape((4,4))
-print('c:', c)
-
-np.add(b, c)
-
-b_col = b[:, np.newaxis]
-b_col
-
-np.add(b_col, c)
-
-from numba import vectorize
-
-@vectorize(['int32(int32, int32)'], target='cuda')
-def add_ufunc(x, y):
-    return x + y
-
-print('a+b:\n', add_ufunc(a, b))
-print()
-print('b_col + c:\n', add_ufunc(b_col, c))
-
-
-#%% tensorflow
-
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+        
 import tensorflow as tf
-gpus = tf.config.list_physical_devices('GPU')
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    print("Name:", gpu.name, "  Type:", gpu.device_type)
+    
+from tensorflow.python.client import device_lib
+
+device_lib.list_local_devices()
+tf.test.is_gpu_available()
+
+
+mnist = tf.keras.datasets.mnist
+
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+x_train, x_test = x_train / 255.0, x_test / 255.0
+
+
+model = tf.keras.models.Sequential([
+  tf.keras.layers.Flatten(input_shape=(28, 28)),
+  tf.keras.layers.Dense(128, activation='relu'),
+  tf.keras.layers.Dropout(0.2),
+  tf.keras.layers.Dense(10)
+])
+
+predictions = model(x_train[:1]).numpy()
+predictions
+
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+model.compile(optimizer='adam',
+              loss=loss_fn,
+              metrics=['accuracy'])
+
+model.fit(x_train, y_train, epochs=5)
+
+model.evaluate(x_test,  y_test, verbose=2)
+
+

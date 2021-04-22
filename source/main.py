@@ -13,13 +13,15 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import load_img
 import keras
+from skimage.color import gray2rgb
+from skimage.transform import rescale, resize, downscale_local_mean
 
 tf.debugging.set_log_device_placement(True)
 
 
-img_size = (240, 240)
-num_classes = 2
-batch_size = 32
+img_size = (240, 320)
+num_classes = 256
+batch_size = 10
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
 project_dir = os.path.dirname(source_dir)
@@ -38,7 +40,6 @@ target_img_paths = [
         for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
         if fname.endswith(".tiff") and not fname.startswith(".")]
 
-    
 class patient:
     def __init__(self, index):
         self.index = index
@@ -81,9 +82,9 @@ def im_data_extract(list_of_patients):
     # list_of_patients = list of patient objeccts
     x_train = []
     y_train = []
-    for patient in patients:
-        x_train.append(patient.images)
-        y_train.append(patient.ground_truth)
+    # for patient in list_of_patients:
+    #     x_train.append(patient.images)
+    #     y_train.append(patient.ground_truth)
         
     x_train_arr = np.array([gray2rgb(image) for sublist in x_train for image in sublist])
     y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
@@ -116,7 +117,7 @@ class IrisImageDatabase(keras.utils.Sequence):
             img = load_img(path, target_size=self.img_size, color_mode="grayscale")
             y[j] = np.expand_dims(img, 2)
             # Ground truth labels are 1, 2, 3. Subtract one to make them 0, 1, 2:
-            y[j] -= 1
+            y[j] = tf.math.divide(y[j],255) - 1
         return x, y
 
 def get_model(img_size, num_classes):
@@ -177,24 +178,25 @@ def get_model(img_size, num_classes):
     return model
 
 
+
 if __name__ == '__main__':
     
-    patients = create_patients(dataset_dir)
+    # patients = create_patients(dataset_dir)
     
-    #%% Preparing training set
-    from skimage.transform import rescale, resize, downscale_local_mean
-    from skimage.color import gray2rgb
+    #% Preparing training set
+    # from skimage.transform import rescale, resize, downscale_local_mean
+    # from skimage.color import gray2rgb
     
     # x_train_arr, y_train_arr = im_data_extract(patients)
     
     # x_train_arr_ds = downsample(x_train_arr)
     # y_train_arr_ds = downsample(y_train_arr)
     
-    #%% VALIDATION SPLIT
+    #% VALIDATION SPLIT
     import random
 
-# Split our img paths into a training and a validation set
-    val_samples = 1000
+    # Split our img paths into a training and a validation set
+    val_samples = int(len(target_img_paths)/2)
     random.Random(1337).shuffle(input_img_paths)
     random.Random(1337).shuffle(target_img_paths)
     train_input_img_paths = input_img_paths[:-val_samples]
@@ -203,13 +205,10 @@ if __name__ == '__main__':
     val_target_img_paths = target_img_paths[-val_samples:]
     
     # Instantiate data Sequences for each split
-    train_gen = IrisImageDatabase(
-        batch_size, img_size, train_input_img_paths, train_target_img_paths
-    )
+    train_gen = IrisImageDatabase(batch_size, img_size, train_input_img_paths, train_target_img_paths)
     val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
-
     
-    #%% U-Net
+    # U Net
     # Configure the model for training.
     # We use the "sparse" version of categorical_crossentropy
     # because our target data is integers.
@@ -221,14 +220,22 @@ if __name__ == '__main__':
     model = get_model(img_size, num_classes)
     model.summary()
         
-    model.compile(optimizer="rmsprop", loss="sparse_categorical_crossentropy")
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
+    
+    import datetime
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
     
     callbacks = [
+        tensorboard_callback,
         keras.callbacks.ModelCheckpoint("oxford_segmentation.h5", save_best_only=True)
     ]
     
     # Train the model, doing validation at the end of each epoch.
-    epochs = 15
+    epochs = 20
     model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks)
+    
+    keras.backend.clear_session()
 
 

@@ -1,1 +1,6 @@
 https://www.tensorflow.org/tutorials/images/segmentation --> example of ML segmentation
+
+https://www.guru99.com/tensorboard-tutorial.html --> tensorboard tutorial
+
+https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html --> CUDA
+	OBS! Please install version 11.0
