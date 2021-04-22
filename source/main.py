@@ -14,6 +14,9 @@ from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import load_img
 import keras
 
+tf.debugging.set_log_device_placement(True)
+
+
 img_size = (240, 240)
 num_classes = 2
 batch_size = 32
