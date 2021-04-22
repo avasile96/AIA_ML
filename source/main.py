@@ -82,9 +82,9 @@ def im_data_extract(list_of_patients):
     # list_of_patients = list of patient objeccts
     x_train = []
     y_train = []
-    # for patient in list_of_patients:
-    #     x_train.append(patient.images)
-    #     y_train.append(patient.ground_truth)
+    for patient in list_of_patients:
+        x_train.append(patient.images)
+        y_train.append(patient.ground_truth)
         
     x_train_arr = np.array([gray2rgb(image) for sublist in x_train for image in sublist])
     y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
