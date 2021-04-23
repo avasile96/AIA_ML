@@ -208,10 +208,7 @@ if __name__ == '__main__':
     train_gen = IrisImageDatabase(batch_size, img_size, train_input_img_paths, train_target_img_paths)
     val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
     
-    # U Net
-    # Configure the model for training.
-    # We use the "sparse" version of categorical_crossentropy
-    # because our target data is integers.
+    # Import U-Net
     
     # Free up RAM in case the model definition cells were run multiple times
     keras.backend.clear_session()
