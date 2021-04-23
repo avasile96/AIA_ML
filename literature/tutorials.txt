@@ -4,3 +4,6 @@ https://www.guru99.com/tensorboard-tutorial.html --> tensorboard tutorial
 
 https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html --> CUDA
 	OBS! Please install version 11.0
+
+https://stackoverflow.com/questions/57067036/can-we-use-haar-classifier-to-detect-iris-of-an-eye-as-done-for-face-and-eyes
+	interesting Haar project on StackOverflow
