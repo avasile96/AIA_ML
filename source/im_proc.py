@@ -98,13 +98,16 @@ if __name__ == '__main__':
     patients = create_patients(dataset_dir)
     
     #% Preparing training set
-    # from skimage.transform import rescale, resize, downscale_local_mean
-    # from skimage.color import gray2rgb
+    from skimage.transform import rescale, resize, downscale_local_mean
+    from skimage.color import gray2rgb
     
-    # x_train_arr, y_train_arr = im_data_extract(patients)
+    x_train_arr, y_train_arr = im_data_extract(patients)
+    
+    # IMAGE PROCESSING
     
     # x_train_arr_ds = downsample(x_train_arr)
     # y_train_arr_ds = downsample(y_train_arr)
+    
     
 
 
