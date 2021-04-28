@@ -10,3 +10,9 @@ https://stackoverflow.com/questions/57067036/can-we-use-haar-classifier-to-detec
 
 https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html
 	Haar transform classification tutorial
+
+https://stackoverflow.com/questions/20071854/wavelet-transform-in-opencv
+	Wavelet/Haar but in C++
+
+https://github.com/pctroll/computer-vision/blob/master/iris_recognition/iris_recognition.py
+	iris recognition project -> inspiration for functions

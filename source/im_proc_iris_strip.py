@@ -15,6 +15,7 @@ from tensorflow.keras.preprocessing.image import load_img
 import keras
 from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
+import cv2
 
 tf.debugging.set_log_device_placement(True)
 
@@ -91,15 +92,27 @@ def im_data_extract(list_of_patients):
     
     return x_train_arr, y_train_arr
 
+########################################################################################################
+
 def getPolar2CartImg(image, rad):
-	imgSize = cv2.GetSize(image)
-	c = (float(imgSize[0]/2.0), float(imgSize[1]/2.0))
-	imgRes = cv2.CreateImage((rad*3, int(360)), 8, 3)
-	#cv.LogPolar(image,imgRes,c,50.0, cv.CV_INTER_LINEAR+cv.CV_WARP_FILL_OUTLIERS)
-	cv2.LogPolar(image,imgRes,c,60.0, cv2.CV_INTER_LINEAR+cv2.CV_WARP_FILL_OUTLIERS)
-	return (imgRes)
+    imgSize = image.shape
+    c = (float(imgSize[0]/2.0), float(imgSize[1]/2.0))
+    # imgRes = cv2.CreateImage((rad*3, int(360)), 8, 3)
+    imgRes = np.zeros((rad*3, 360,3))
+    #cv.LogPolar(image,imgRes,c,50.0, cv.CV_INTER_LINEAR+cv.CV_WARP_FILL_OUTLIERS)
+    cv2.warpPolar(image, imgRes, c, 60.0, cv2.WARP_POLAR_LOG)
+    return (imgRes)
 
-
+def getCircles(image):
+	i = 80
+	while i < 151:
+		storage = cv2.CreateMat(image.width, 1, cv2.CV_32FC3)
+		cv2.HoughCircles(image, storage, cv2.CV_HOUGH_GRADIENT, 2, 100.0, 30, i, 100, 140)
+		circles = np.asarray(storage)
+		if (len(circles) == 1):
+			return circles
+		i +=1
+	return ([])
 
 if __name__ == '__main__':
     
@@ -110,46 +123,12 @@ if __name__ == '__main__':
     from skimage.color import gray2rgb
     
     x_arr, y_arr = im_data_extract(patients)
-
-    #%% Morphological Transformations
-    import cv2
-    import random as rng
-
-    
-    # cv2.imshow('og_image',x_arr[0])
-    
     x_gray = cv2.cvtColor(x_arr[0], cv2.COLOR_BGR2GRAY)
-    cv2.imshow('img2gray',x_gray)
-    
-    # Grayscale morphology
-    kern_radius = 5
-    kernel = np.ones((kern_radius,kern_radius),np.uint8)
-    
-    closing = cv2.morphologyEx(x_gray, cv2.MORPH_CLOSE, kernel, iterations = 2)
-    cv2.imshow('closing',closing)
-    
-    opening = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel, iterations = 2)
-    cv2.imshow('opening',opening)
-    
-    #%% Finding contours
-    # Detect edges using Canny
-    th = 100
-    canny_output = cv2.Canny(opening, th, th * 2)
-    cv2.imshow('canny_output',canny_output)
-    
-    contours, hierarchy = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
+    # cv2.imshow('og_image',x_arr[0])
 
-    # color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-    color = (0,0,0)
-    cv2.drawContours(x_gray, contours, 3, color, -2, cv2.LINE_8, hierarchy, 0)
-
-    # Show in a window
-    cv2.imshow('Contours', x_gray)
-    
     #%% Iris Strip
     
+
     strip = getPolar2CartImg(x_gray, 30)
     cv2.imshow('Contours', strip)
     
