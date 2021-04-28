@@ -98,9 +98,9 @@ def getPolar2CartImg(image, rad):
     imgSize = image.shape
     c = (float(imgSize[0]/2.0), float(imgSize[1]/2.0))
     # imgRes = cv2.CreateImage((rad*3, int(360)), 8, 3)
-    imgRes = np.zeros((rad*3, 360,3))
+    imgRes = np.zeros((rad*3, 360))
     #cv.LogPolar(image,imgRes,c,50.0, cv.CV_INTER_LINEAR+cv.CV_WARP_FILL_OUTLIERS)
-    cv2.warpPolar(image, imgRes, c, 60.0, cv2.WARP_POLAR_LOG)
+    cv2.warpPolar(image, imgRes, c, 60, cv2.WARP_POLAR_LOG)
     return (imgRes)
 
 def getCircles(image):
