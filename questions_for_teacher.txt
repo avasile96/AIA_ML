@@ -1,0 +1,5 @@
+1. Shadow gradient removal
+2. Polar transform
+3. Fourier processing
+4. Suggestions for Machine Learning Algorithms
+5. Criteria selection / Parameter selection
