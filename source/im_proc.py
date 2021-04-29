@@ -97,7 +97,6 @@ def getPolar2CartImg(image, rad):
 	imgSize = cv2.GetSize(image)
 	c = (float(imgSize[0]/2.0), float(imgSize[1]/2.0))
 	imgRes = cv2.CreateImage((rad*3, int(360)), 8, 3)
-	#cv.LogPolar(image,imgRes,c,50.0, cv.CV_INTER_LINEAR+cv.CV_WARP_FILL_OUTLIERS)
 	cv2.LogPolar(image,imgRes,c,60.0, cv2.CV_INTER_LINEAR+cv2.CV_WARP_FILL_OUTLIERS)
 	return (imgRes)
 
