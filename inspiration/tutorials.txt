@@ -16,3 +16,6 @@ https://stackoverflow.com/questions/20071854/wavelet-transform-in-opencv
 
 https://github.com/pctroll/computer-vision/blob/master/iris_recognition/iris_recognition.py
 	iris recognition project -> inspiration for functions
+
+https://www.youtube.com/watch?v=azM57JuQpQI
+	UNet Tutorial

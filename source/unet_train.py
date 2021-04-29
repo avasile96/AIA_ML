@@ -181,17 +181,6 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
-    # patients = create_patients(dataset_dir)
-    
-    #% Preparing training set
-    # from skimage.transform import rescale, resize, downscale_local_mean
-    # from skimage.color import gray2rgb
-    
-    # x_train_arr, y_train_arr = im_data_extract(patients)
-    
-    # x_train_arr_ds = downsample(x_train_arr)
-    # y_train_arr_ds = downsample(y_train_arr)
-    
     #% VALIDATION SPLIT
     import random
 
@@ -229,11 +218,11 @@ if __name__ == '__main__':
     
     callbacks = [
         tensorboard_callback,
-        keras.callbacks.ModelCheckpoint("oxford_segmentation.h5", save_best_only=True)
+        keras.callbacks.ModelCheckpoint("iris_unet.h5", save_best_only=True)
     ]
     
     # Train the model, doing validation at the end of each epoch.
-    epochs = 20
+    epochs = 10
     model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks)
     
     keras.backend.clear_session()

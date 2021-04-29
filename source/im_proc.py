@@ -135,8 +135,10 @@ def get_contours(img_in):
     cv2.drawContours(x_gray, contours, 3, color, -2, cv2.LINE_8, hierarchy, 0)
     return contours
 
-def mean_shift(image):
-    ms_img = cv2.pyrMeanShiftFiltering(image, 25, 30)
+def mean_shift(ms_in):
+    ms_in = cv2.cvtColor(ms_in, cv2.COLOR_GRAY2BGR)
+    ms_img = cv2.pyrMeanShiftFiltering(ms_in, 25, 30)
+    ms_img = cv2.cvtColor(ms_img, cv2.COLOR_BGR2GRAY)
     return ms_img
 
 def morfo_trans(image):
@@ -146,40 +148,56 @@ def morfo_trans(image):
     
     closing = cv2.morphologyEx(x_gray, cv2.MORPH_CLOSE, kernel, iterations = 2)
     # cv2.imshow('closing',closing)
-    
     cl_op = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel, iterations = 2)
     # cv2.imshow('opening',cl_op)
     return cl_op
 
 def draw_circles(img):
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    medianBlurim = cv2.medianBlur(gray_img, 5)
-    pupil = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
-    print(pupil)
-    pupil = np.uint16(np.around(pupil))
+
+    medianBlurim = cv2.medianBlur(img, 5)
+    pupil_outline = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+
+    pupil_outline = np.uint16(np.around(pupil_outline))
     
     # Mean shift filtering
-    mean_shift = cv2.pyrMeanShiftFiltering(img, 25, 30)
+    m_shift = mean_shift(img)
     
-    cv2.imshow('k-means', mean_shift)
-    gray_mean = cv2.cvtColor(mean_shift, cv2.COLOR_BGR2GRAY)
+    iris_outline = cv2.HoughCircles(m_shift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    print(iris_outline)
+    iris_outline = np.uint16(np.around(iris_outline))
     
-    iris = cv2.HoughCircles(gray_mean, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
-    print(iris)
-    iris = np.uint16(np.around(iris))
-    
-    for i in iris[0, :]:
+    for i in iris_outline[0, :]:
         # draw the outer circle
         cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
         # draw the center of the circle
         cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
     
-    for i in pupil[0, :]:
+    for i in pupil_outline[0, :]:
         # draw the outer circle
         cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
         # draw the center of the circle
         cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
-    return img
+    return img, iris_outline, pupil_outline
+
+def iris_strip(img, pupil_outline, iris_outline):
+    center = (376, 184)
+    iris_radius = iris_outline[2]-pupil_outline[2] # outter_radius - inner radius
+    
+    nsamples = 360
+    samples = np.linspace(0, 2 * np.pi, nsamples)[:-1]
+    
+    polar = np.zeros((iris_radius, nsamples))
+    
+    for r in range(iris_radius):
+        for theta in samples:
+            x = r * np.cos(theta) + center[0]
+            y = r * np.sin(theta) + center[1]
+            
+            polar[r][theta * nsamples / 2.0 / np.pi] = image[y][x][0]
+    
+    plt.figure(figsize=(10, 5))
+    plt.imshow(polar, cmap='gray')
+    return polar
 
 
 #%% MAIN
@@ -208,13 +226,12 @@ if __name__ == '__main__':
     # cv2.imshow('Contours', contour_image)
     
     #%% CIRCLES
-    eye_circles = draw_circles(og_image)
+    eye_circles, pupil_outline, iris_outlline = draw_circles(x_gray)
     cv2.imshow('eye_circles', eye_circles)
     
 
     #%% MEAN SHIFT
-    ms_in = cv2.cvtColor(cl_op, cv2.COLOR_GRAY2BGR)
-    ms_img = mean_shift(ms_in)
+    ms_img = mean_shift(cl_op)
     cv2.imshow('mean_shifted_image', ms_img)
     
     #%% KMEANS

@@ -181,17 +181,6 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
-    # patients = create_patients(dataset_dir)
-    
-    #% Preparing training set
-    # from skimage.transform import rescale, resize, downscale_local_mean
-    # from skimage.color import gray2rgb
-    
-    # x_train_arr, y_train_arr = im_data_extract(patients)
-    
-    # x_train_arr_ds = downsample(x_train_arr)
-    # y_train_arr_ds = downsample(y_train_arr)
-    
     #% VALIDATION SPLIT
     import random
 
@@ -225,8 +214,8 @@ if __name__ == '__main__':
 
     
     from keras.models import load_model
-    model = load_model('oxford_segmentation.h5')
+    model = load_model('iris_unet.h5')
     
-    keras.backend.clear_session()
+
 
 
