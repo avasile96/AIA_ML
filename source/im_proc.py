@@ -15,6 +15,8 @@ from tensorflow.keras.preprocessing.image import load_img
 import keras
 from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
+import cv2
+import random as rng
 
 tf.debugging.set_log_device_placement(True)
 
@@ -105,13 +107,13 @@ def contrast_adaptive(img):
     cl1 = clahe.apply(img)
     return cl1
 
-def k_means_seg(img):
+def k_means_seg(img, k = 3):
     Z = img.reshape((-1,3))
     # convert to np.float32
     Z = np.float32(Z)
     # define criteria, number of clusters(K) and apply kmeans()
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-    K = 3
+    K = k
     ret,label,center=cv2.kmeans(Z,K,None,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
     # Now convert back into uint8, and make original image
     center = np.uint8(center)
@@ -119,7 +121,69 @@ def k_means_seg(img):
     res2 = res.reshape((img.shape))    
     return res2
 
-#%%
+def get_contours(img_in):
+    # Detect edges using Canny
+    th = 100
+    canny_output = cv2.Canny(img_in, th, th * 2)
+    cv2.imshow('canny_output',canny_output)
+    
+    contours, hierarchy = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
+
+    # color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
+    color = (0,0,0)
+    cv2.drawContours(x_gray, contours, 3, color, -2, cv2.LINE_8, hierarchy, 0)
+    return contours
+
+def mean_shift(image):
+    ms_img = cv2.pyrMeanShiftFiltering(image, 25, 30)
+    return ms_img
+
+def morfo_trans(image):
+    # Grayscale morphology
+    kern_radius = 5
+    kernel = np.ones((kern_radius,kern_radius),np.uint8)
+    
+    closing = cv2.morphologyEx(x_gray, cv2.MORPH_CLOSE, kernel, iterations = 2)
+    # cv2.imshow('closing',closing)
+    
+    cl_op = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel, iterations = 2)
+    # cv2.imshow('opening',cl_op)
+    return cl_op
+
+def draw_circles(img):
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    medianBlurim = cv2.medianBlur(gray_img, 5)
+    pupil = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+    print(pupil)
+    pupil = np.uint16(np.around(pupil))
+    
+    # Mean shift filtering
+    mean_shift = cv2.pyrMeanShiftFiltering(img, 25, 30)
+    
+    cv2.imshow('k-means', mean_shift)
+    gray_mean = cv2.cvtColor(mean_shift, cv2.COLOR_BGR2GRAY)
+    
+    iris = cv2.HoughCircles(gray_mean, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    print(iris)
+    iris = np.uint16(np.around(iris))
+    
+    for i in iris[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    
+    for i in pupil[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    return img
+
+
+#%% MAIN
 if __name__ == '__main__':
     
     patients = create_patients(dataset_dir)
@@ -130,52 +194,39 @@ if __name__ == '__main__':
     
     x_arr, y_arr = im_data_extract(patients)
 
-    #%% Morphological Transformations
-    import cv2
-    import random as rng
-
-    
+    og_image = patients[94].images[0]
     # cv2.imshow('og_image',x_arr[0])
     
-    x_gray = cv2.cvtColor(patients[94].images[0], cv2.COLOR_BGR2GRAY)
+    x_gray = cv2.cvtColor(og_image, cv2.COLOR_BGR2GRAY)
     cv2.imshow('img2gray',x_gray)
-    
-    # Grayscale morphology
-    kern_radius = 5
-    kernel = np.ones((kern_radius,kern_radius),np.uint8)
-    
-    closing = cv2.morphologyEx(x_gray, cv2.MORPH_CLOSE, kernel, iterations = 2)
-    cv2.imshow('closing',closing)
-    
-    opening = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel, iterations = 2)
-    cv2.imshow('opening',opening)
-    
+
+    #%% Morphological Transformations
+    cl_op = morfo_trans(og_image)
+    cv2.imshow('opening',cl_op)
+
     #%% Finding contours
-    # Detect edges using Canny
-    th = 100
-    canny_output = cv2.Canny(opening, th, th * 2)
-    cv2.imshow('canny_output',canny_output)
+    # contour_image = get_contours(x_gray)
+    # cv2.imshow('Contours', contour_image)
     
-    contours, hierarchy = cv2.findContours(canny_output, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #%% CIRCLES
+    eye_circles = draw_circles(og_image)
+    cv2.imshow('eye_circles', eye_circles)
     
-    drawing = np.zeros((canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
 
-    # color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-    color = (0,0,0)
-    cv2.drawContours(x_gray, contours, 3, color, -2, cv2.LINE_8, hierarchy, 0)
-
-    # Show in a window
-    cv2.imshow('Contours', x_gray)
+    #%% MEAN SHIFT
+    ms_in = cv2.cvtColor(cl_op, cv2.COLOR_GRAY2BGR)
+    ms_img = mean_shift(ms_in)
+    cv2.imshow('mean_shifted_image', ms_img)
     
     #%% KMEANS
+    k_seg_out = k_means_seg(ms_img, k = 4)
+    cv2.imshow('k_means_seg', k_seg_out)
     
-    im = k_means_seg(opening)
-    cv2.imshow('k_means_seg', im)
     
     #%% Iris Strip
+    # strip = getPolar2CartImg(x_gray, 30)
+    # cv2.imshow('Contours', strip)
     
-    strip = getPolar2CartImg(x_gray, 30)
-    cv2.imshow('Contours', strip)
     
     
     

@@ -1,7 +1,47 @@
 1. Shadow gradient removal
 2. Polar transform
-3. Fourier processing
+3. Fourier processing --> Gabor filters; Haar features?
+	--> graylevel concurance matrix
+	--> statistical textures features
+	-->
 4. Suggestions for Machine Learning Algorithms
 5. Criteria selection / Parameter selection
 
 Worst folders: 95, 59
+
+morphology on eyelashes
+eyelid segmentation
+
+mean_shift b4 kmeans
+
+seg --> unet
+
+machine learning --> simplel kmeans CLUSTERING
+	--> CLUESTERING
+	--> statistical methods
+	--> for recognition
+	--> work in the feature domain
+	--> shallow neural networks (not confident)
+
+Check the folder in Drive -->resnet
+
+Deep Clustering (autoencoders)
+
+Directions:
+- shadow removal (Manuel)
+- polar transformation (Manuel)
+	--> Fourier processing --> Gabor filters; Haar features?
+		--> graylevel concurance matrix
+		--> statistical textures features
+
+
+Machine Learning --> simplel kmeans CLUSTERING
+		--> CLUESTERING
+		--> statistical methods
+		--> for recognition
+		--> work in the feature domain
+		--> shallow neural networks (not confident)
+
+- U-Net Tuning (Alex)
+
+
