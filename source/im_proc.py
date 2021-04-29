@@ -180,23 +180,27 @@ def draw_circles(img):
     return img, iris_outline, pupil_outline
 
 def iris_strip(img, pupil_outline, iris_outline):
-    center = (376, 184)
-    iris_radius = iris_outline[2]-pupil_outline[2] # outter_radius - inner radius
+    center = pupil_outline[0,0,0],pupil_outline[0,0,1]
+    iris_radius = iris_outline[0,0,2]-pupil_outline[0,0,2] # outter_radius - inner radius
     
-    nsamples = 360
+    canvas = np.zeros_like(img)
+    cv2.circle(canvas,center,iris_radius,255)
+    points = np.transpose(np.where(img==255))
+    
+    nsamples = points.shape[0]
     samples = np.linspace(0, 2 * np.pi, nsamples)[:-1]
     
     polar = np.zeros((iris_radius, nsamples))
-    
+
     for r in range(iris_radius):
-        for theta in samples:
-            x = r * np.cos(theta) + center[0]
-            y = r * np.sin(theta) + center[1]
+        for (i, theta) in (range(samples.shape[0]), samples):
+            x = r * np.cos(theta) + points[i][0]
+            y = r * np.sin(theta) + points[i][1]
             
-            polar[r][theta * nsamples / 2.0 / np.pi] = image[y][x][0]
+            polar[r][theta * nsamples / 2.0 / np.pi] = img[y][x]
     
-    plt.figure(figsize=(10, 5))
-    plt.imshow(polar, cmap='gray')
+    # plt.figure(figsize=(10, 5))
+    # plt.imshow(polar, cmap='gray')
     return polar
 
 
@@ -240,8 +244,8 @@ if __name__ == '__main__':
     
     
     #%% Iris Strip
-    # strip = getPolar2CartImg(x_gray, 30)
-    # cv2.imshow('Contours', strip)
+    strip = iris_strip(eye_circles, pupil_outline, iris_outlline)
+    cv2.imshow('Contours', strip)
     
     
     
