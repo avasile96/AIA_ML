@@ -15,12 +15,14 @@ from tensorflow.keras.preprocessing.image import load_img
 import keras
 from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
+from PIL import ImageMath
+from skimage import io
 
 tf.debugging.set_log_device_placement(True)
 
 
 img_size = (240, 320)
-num_classes = 256
+num_classes = 3
 batch_size = 10
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
@@ -167,7 +169,7 @@ def get_model(img_size, num_classes):
         # Project residual
         residual = layers.UpSampling2D(2)(previous_block_activation)
         residual = layers.Conv2D(filters, 1, padding="same")(residual)
-        x = layers.add([x, residual])  # Add back residual
+        x = layers.add([x, residual]) # Add back residual
         previous_block_activation = x  # Set aside next residual
 
     # Add a per-pixel classification layer
@@ -208,8 +210,10 @@ if __name__ == '__main__':
     # Build model
     model = get_model(img_size, num_classes)
     model.summary()
+    
+    opt = tf.keras.optimizers.Adam(clipnorm=1.0)
         
-    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
+    model.compile(optimizer='adam', loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
     
     import datetime
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -217,13 +221,15 @@ if __name__ == '__main__':
 
     
     callbacks = [
-        tensorboard_callback,
-        keras.callbacks.ModelCheckpoint("iris_unet.h5", save_best_only=True)
+        keras.callbacks.ModelCheckpoint("iris_unet.h5", save_best_only=True, overwrite = True)
     ]
     
     # Train the model, doing validation at the end of each epoch.
-    epochs = 10
-    model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks)
+    epochs = 1
+    model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks, batch_size = batch_size)
+    model.save(
+    'iris_unet.h5', overwrite=True, include_optimizer=True, save_format=None,
+    signatures=None, options=None, save_traces=True)
     
     keras.backend.clear_session()
 

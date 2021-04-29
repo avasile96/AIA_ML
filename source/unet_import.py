@@ -20,7 +20,7 @@ tf.debugging.set_log_device_placement(True)
 
 
 img_size = (240, 320)
-num_classes = 256
+num_classes = 3
 batch_size = 10
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
@@ -181,11 +181,25 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
+    # patients = create_patients(dataset_dir)
+    
+    # #% Preparing training set
+    # from skimage.transform import rescale, resize, downscale_local_mean
+    # from skimage.color import gray2rgb
+    
+    # x_arr, y_arr = im_data_extract(patients)
+
+    # og_image = patients[94].images[0]
+    # cv2.imshow('og_image',x_arr[0])
+    
+    # x_gray = cv2.cvtColor(og_image, cv2.COLOR_BGR2GRAY)
+    # cv2.imshow('img2gray',x_gray)
+    
     #% VALIDATION SPLIT
     import random
 
     # Split our img paths into a training and a validation set
-    val_samples = int(len(target_img_paths)/2)
+    val_samples = int(len(target_img_paths)/100)
     random.Random(1337).shuffle(input_img_paths)
     random.Random(1337).shuffle(target_img_paths)
     train_input_img_paths = input_img_paths[:-val_samples]
@@ -203,10 +217,8 @@ if __name__ == '__main__':
     keras.backend.clear_session()
     
     # Build model
-    model = get_model(img_size, num_classes)
-    model.summary()
         
-    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
+
     
     import datetime
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -215,6 +227,13 @@ if __name__ == '__main__':
     
     from keras.models import load_model
     model = load_model('iris_unet.h5')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
+    
+    a = model.predict(
+    val_gen, batch_size=2, verbose=2, steps=None, callbacks=None, max_queue_size=10,
+    workers=2, use_multiprocessing=False)
+    print(a.max())
+
     
 
 
