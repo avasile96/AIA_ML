@@ -191,20 +191,6 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
-    # patients = create_patients(dataset_dir)
-    
-    # #% Preparing training set
-    # from skimage.transform import rescale, resize, downscale_local_mean
-    # from skimage.color import gray2rgb
-    
-    # x_arr, y_arr = im_data_extract(patients)
-
-    # og_image = patients[94].images[0]
-    # cv2.imshow('og_image',x_arr[0])
-    
-    # x_gray = cv2.cvtColor(og_image, cv2.COLOR_BGR2GRAY)
-    # cv2.imshow('img2gray',x_gray)
-    
     #% VALIDATION SPLIT
     import random
 
@@ -227,8 +213,6 @@ if __name__ == '__main__':
     keras.backend.clear_session()
     
     # Build model
-        
-
     
     import datetime
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
