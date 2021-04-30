@@ -22,7 +22,7 @@ tf.debugging.set_log_device_placement(True)
 
 
 img_size = (240, 320)
-num_classes = 3
+num_classes = 2
 batch_size = 10
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
