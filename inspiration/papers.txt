@@ -1,0 +1,3 @@
+https://deepai.org/publication/deepiris-iris-recognition-using-a-deep-learning-approach --> this paper uses exactly our dataset
+	- proposes a train/test split of 6/4 (per patient aka 10 imgs)
+

@@ -1,2 +1,0 @@
-https://www.tensorflow.org/tutorials/images/segmentation --> example of ML segmentation
-https://keras.io/examples/vision/oxford_pets_image_segmentation/ --> U-Net

@@ -1,0 +1,21 @@
+https://www.tensorflow.org/tutorials/images/segmentation --> example of ML segmentation
+
+https://www.guru99.com/tensorboard-tutorial.html --> tensorboard tutorial
+
+https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html --> CUDA
+	OBS! Please install version 11.0
+
+https://stackoverflow.com/questions/57067036/can-we-use-haar-classifier-to-detect-iris-of-an-eye-as-done-for-face-and-eyes
+	interesting Haar project on StackOverflow
+
+https://docs.opencv.org/3.4/db/d28/tutorial_cascade_classifier.html
+	Haar transform classification tutorial
+
+https://stackoverflow.com/questions/20071854/wavelet-transform-in-opencv
+	Wavelet/Haar but in C++
+
+https://github.com/pctroll/computer-vision/blob/master/iris_recognition/iris_recognition.py
+	iris recognition project -> inspiration for functions
+
+https://www.youtube.com/watch?v=azM57JuQpQI
+	UNet Tutorial
