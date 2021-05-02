@@ -19,6 +19,7 @@ import keras
 from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
 import random
+import cv2
 
 tf.debugging.set_log_device_placement(True)
 
@@ -73,6 +74,66 @@ class IrisImageDatabase(keras.utils.Sequence):
             y[j] = img
             y[j] = tf.math.divide(y[j],255)
         return x, y
+
+def daugman_normalizaiton(image, r_in, r_out, height = img_size[0], width = img_size[1]):
+    thetas = np.arange(0, 2 * np.pi, 2 * np.pi / width)  # Theta values
+    r_out = r_in + r_out
+    # Create empty flatten image
+    flat = np.zeros((height,width, 3), np.uint8)
+    circle_x = int(image.shape[0] / 2)
+    circle_y = int(image.shape[1] / 2)
+
+    for i in range(width):
+        for j in range(height):
+            theta = thetas[i]  # value of theta coordinate
+            r_pro = j / height  # value of r coordinate(normalized)
+
+            # get coordinate of boundaries
+            Xi = circle_x + r_in * np.cos(theta)
+            Yi = circle_y + r_in * np.sin(theta)
+            Xo = circle_x + r_out * np.cos(theta)
+            Yo = circle_y + r_out * np.sin(theta)
+
+            # the matched cartesian coordinates for the polar coordinates
+            Xc = (1 - r_pro) * Xi + r_pro * Xo
+            Yc = (1 - r_pro) * Yi + r_pro * Yo
+
+            color = image[int(Xc)][int(Yc)]  # color of the pixel
+
+            flat[j][i] = color
+    return flat  # liang
+
+def mean_shift(ms_in):
+    ms_in = cv2.cvtColor(ms_in, cv2.COLOR_GRAY2BGR)
+    ms_img = cv2.pyrMeanShiftFiltering(ms_in, 25, 30)
+    ms_img = cv2.cvtColor(ms_img, cv2.COLOR_BGR2GRAY)
+    return ms_img
+
+def draw_circles(img):
+    medianBlurim = cv2.medianBlur(img, 5)
+    pupil_outline = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+
+    pupil_outline = np.uint16(np.around(pupil_outline))
+    
+    # Mean shift filtering
+    m_shift = mean_shift(img)
+    
+    iris_outline = cv2.HoughCircles(m_shift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    print(iris_outline)
+    iris_outline = np.uint16(np.around(iris_outline))
+    
+    for i in iris_outline[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    
+    for i in pupil_outline[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    return img, iris_outline, pupil_outline
 
 def GetTestTrainGenerators(val_percent):
     val_samples = int(len(target_img_paths)*val_percent/100)
