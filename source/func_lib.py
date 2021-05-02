@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr 23 09:56:55 2021
+Created on Sun May  2 12:31:17 2021
 
-@author: alex
-
-This script imports the Unet and applies segmentation
-
+@author: vasil
 """
-
 import os
 import gc
 import numpy as np
@@ -20,31 +16,6 @@ from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
 import random
 import cv2
-from keras.models import load_model
-
-tf.debugging.set_log_device_placement(True)
-
-
-img_size = (240, 320)
-num_classes = 2
-batch_size = 10
-
-source_dir = os.path.dirname(os.path.abspath(__name__))
-project_dir = os.path.dirname(source_dir)
-dataset_dir = os.path.join(project_dir, 'dataset')
-
-input_img_paths = []
-for patient_index in os.listdir(os.path.join(dataset_dir, 'images')):
-    if os.path.isdir(os.path.join(dataset_dir, 'images', patient_index)):
-        # patient_dir = os.path.join(dataset_dir, 'images', patient_index)
-        for fname in os.listdir(os.path.join(dataset_dir, 'images', patient_index)):
-            if fname.endswith(".bmp") and not fname.startswith("."):
-                input_img_paths.append(os.path.join(dataset_dir, 'images', patient_index, fname))
-
-target_img_paths = [
-        os.path.join(dataset_dir, 'groundtruth', fname)
-        for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
-        if fname.endswith(".tiff") and not fname.startswith(".")]
 
 class IrisImageDatabase(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
@@ -75,10 +46,66 @@ class IrisImageDatabase(keras.utils.Sequence):
             y[j] = img
             y[j] = tf.math.divide(y[j],255)
         return x, y
+
+def daugman_normalizaiton(image, r_in, r_out, height = img_size[0], width = img_size[1]):
+    thetas = np.arange(0, 2 * np.pi, 2 * np.pi / width)  # Theta values
+    r_out = r_in + r_out
+    # Create empty flatten image
+    flat = np.zeros((height,width, 3), np.uint8)
+    circle_x = int(image.shape[0] / 2)
+    circle_y = int(image.shape[1] / 2)
+
+    for i in range(width):
+        for j in range(height):
+            theta = thetas[i]  # value of theta coordinate
+            r_pro = j / height  # value of r coordinate(normalized)
+
+            # get coordinate of boundaries
+            Xi = circle_x + r_in * np.cos(theta)
+            Yi = circle_y + r_in * np.sin(theta)
+            Xo = circle_x + r_out * np.cos(theta)
+            Yo = circle_y + r_out * np.sin(theta)
+
+            # the matched cartesian coordinates for the polar coordinates
+            Xc = (1 - r_pro) * Xi + r_pro * Xo
+            Yc = (1 - r_pro) * Yi + r_pro * Yo
+
+            color = image[int(Xc)][int(Yc)]  # color of the pixel
+
+            flat[j][i] = color
+    return flat  # liang
+
+def mean_shift(ms_in):
+    ms_in = cv2.cvtColor(ms_in, cv2.COLOR_GRAY2BGR)
+    ms_img = cv2.pyrMeanShiftFiltering(ms_in, 25, 30)
+    ms_img = cv2.cvtColor(ms_img, cv2.COLOR_BGR2GRAY)
+    return ms_img
+
+def draw_circles(img):
+    medianBlurim = cv2.medianBlur(img, 5)
+    pupil_outline = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+
+    pupil_outline = np.uint16(np.around(pupil_outline))
     
-def apply_segmentation_gen(generator):
+    # Mean shift filtering
+    m_shift = mean_shift(img)
     
-    return img_roi
+    iris_outline = cv2.HoughCircles(m_shift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    print(iris_outline)
+    iris_outline = np.uint16(np.around(iris_outline))
+    
+    for i in iris_outline[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    
+    for i in pupil_outline[0, :]:
+        # draw the outer circle
+        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+    return img, iris_outline, pupil_outline
 
 def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size):
     val_samples = int(len(target_img_paths)*val_percent/100)
@@ -161,49 +188,3 @@ def get_model(img_size, num_classes):
      
     model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
     return model
-
-
-if __name__ == '__main__':
-    
-    # Train-Validation Split
-    train_gen, val_gen = GetTestTrainGenerators(1, input_img_paths, target_img_paths, batch_size, img_size)
-
-    #%% SEGMENTATION
-    # Free up RAM in case the model definition cells were run multiple times
-    keras.backend.clear_session()
-    # Import U-Net
-    
-    model = load_model('iris_unet.h5')
-    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
-    # Get predictions (segment) images from the dataset
-    # "a" contains images segmented by UNet
-    a = model.predict(
-        val_gen, 
-        batch_size=2, 
-        verbose=2, 
-        steps=None, 
-        callbacks=None, 
-        max_queue_size=10,
-        workers=2, 
-        use_multiprocessing=False)
-    
-    th1, b = cv2.threshold(np.squeeze(a[0]),0.1,1,cv2.THRESH_BINARY)
-    
-    """
-    First index represents the input/target pair selection (0 = first pair)
-    Second index represents the input/target selection (0 is input)
-    Thrid index is the n-th image in the minibatch (0 = first image)
-    --> so in the line below we access the first image of the first
-    input of the first input/target pair 
-    """
-    io.imshow(val_gen.__getitem__(0)[0][0])
-    
-    cut_image = np.multiply(val_gen.__getitem__(0)[0][0], b)
-    io.imshow(cut_image)        
-    
-    pupil_outline = cv2.HoughCircles(b, cv2.HOUGH_GRADIENT, 1.5, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
-    
-    #%% POLAR TRANSFORM
-
-
-
