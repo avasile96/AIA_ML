@@ -270,7 +270,7 @@ if __name__ == '__main__':
     pupil_outline = np.uint16(np.around(pupil_outline))
     
     
-    iris_outline = iris_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 2, minRadius = 300)
+    iris_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 2, minRadius = 1000)
     iris_outline = np.uint16(np.around(pupil_outline))
     
     canvas = np.ones_like(og_image)
