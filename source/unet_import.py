@@ -244,11 +244,7 @@ if __name__ == '__main__':
     tst_img = io.imread(input_img_paths[0])
     tst_gray = cv2.cvtColor(tst_img, cv2.COLOR_RGB2GRAY)
     
-    # # contour trial
-    # cnt = find_contours(tst_img, open_mask)
-    # cv2.drawContours(tst_img, cnt,  -1, (255,0,0), 2)
-    # cv2.imshow('Objects Detected',tst_img)
-    
+
     #%% Hough Circles Trial
     pred_sq = np.squeeze(prediction)*255
     pred_sq_uint8 = np.uint8(pred_sq)
@@ -270,8 +266,8 @@ if __name__ == '__main__':
     pupil_outline = np.uint16(np.around(pupil_outline))
     
     
-    iris_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 2, minRadius = 1000)
-    iris_outline = np.uint16(np.around(pupil_outline))
+    iris_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 2, minRadius = 180)
+    iris_outline = np.uint16(np.around(iris_outline))
     
     canvas = np.ones_like(og_image)
 
@@ -289,8 +285,6 @@ if __name__ == '__main__':
     f3.suptitle('circle_img')
     io.imshow(og_copy)
     
-
-    
     center = (np.squeeze(pupil_outline)[0], np.squeeze(pupil_outline)[1])
     max_rad = np.squeeze(iris_outline)[2]
     
@@ -298,6 +292,27 @@ if __name__ == '__main__':
     f4 = plt.figure()
     f4.suptitle('strip')
     io.imshow(strip)
+    
+    #%% contour trial
+    cnt, hierarchy = cv2.findContours(open_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    cv2.drawContours(og_copy, cnt,  -1, (255,0,0), 2)
+    cv2.imshow('Objects Detected',og_copy)
+    
+    byakugan = cv2.fillPoly(open_mask, pts =cnt, color=(255,255,255))\
+    
+    cv2.imshow('byakugan byakugan',byakugan)
+    
+    iris_outline = cv2.HoughCircles(byakugan, cv2.HOUGH_GRADIENT, 1, minDist = 1)
+    iris_outline = np.uint16(np.around(iris_outline))
+    for i in iris_outline[0, :]:
+            # draw the outer circle
+            cv2.circle(og_copy, (i[0], i[1]), i[2], (0, 255, 0), 2, 1)
+            # draw the center of the circle
+            cv2.circle(og_copy, (i[0], i[1]), 2, (0, 0, 255), 3) 
+    f3 = plt.figure()
+    f3.suptitle('circle_img')
+    io.imshow(og_copy)
+    
     #%%
     # # distance map
     # inverted_mask = cv2.bitwise_not(open_mask)-254
