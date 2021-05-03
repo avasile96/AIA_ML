@@ -21,6 +21,10 @@ from skimage.transform import rescale, resize, downscale_local_mean
 import random
 import cv2
 from keras.models import load_model
+import matplotlib.pyplot as plt
+from func_lib import get_circles, mean_shift
+from im_proc import draw_circles
+from scipy.spatial import distance
 
 tf.debugging.set_log_device_placement(True)
 
@@ -76,8 +80,8 @@ class IrisImageDatabase(keras.utils.Sequence):
             y[j] = tf.math.divide(y[j],255)
         return x, y
     
-def apply_segmentation_gen(generator):
-    
+def apply_segmentation_gen(generator): # TODO
+    img_roi = 2 ### PLACEHOLDER
     return img_roi
 
 def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size):
@@ -93,7 +97,7 @@ def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch
     val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
     return train_gen, val_gen
 
-def stripTease(seg_img, center, max_radius):
+def stripTease(seg_img, center, max_radius): # TODO
     flags = cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS
     final_strip = cv2.linearPolar(seg_img, center, max_radius, flags)
     
@@ -162,6 +166,21 @@ def get_model(img_size, num_classes):
     model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
     return model
 
+def find_contours(og_image, thresh):
+    contours,hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # cnt = contours
+    
+    contour_list = []
+    for contour in contours:
+        approx = cv2.approxPolyDP(contour,0.01*cv2.arcLength(contour,True),True)
+        area = cv2.contourArea(contour)
+
+        contour_list.append(contour)
+    
+    cv2.drawContours(og_image, contour_list,  -1, (255,0,0), 2)
+    cv2.imshow('Objects Detected',og_image)
+    
+    return contour_list
 
 if __name__ == '__main__':
     
@@ -186,22 +205,133 @@ if __name__ == '__main__':
         max_queue_size=10,
         workers=2, 
         use_multiprocessing=False)
-    
-    th1, b = cv2.threshold(np.squeeze(a[0]),0.1,1,cv2.THRESH_BINARY)
-    
+    #%% Strip
     """
+    val_gen.__getitem__(0)[0][0] DESCRIPTION
+    ...
     First index represents the input/target pair selection (0 = first pair)
     Second index represents the input/target selection (0 is input)
     Thrid index is the n-th image in the minibatch (0 = first image)
     --> so in the line below we access the first image of the first
     input of the first input/target pair 
     """
-    io.imshow(val_gen.__getitem__(0)[0][0])
+    og_image = val_gen.__getitem__(0)[0][0] # getting og image
+    prediction = a[0] # getting prediction
+
+    f1 = plt.figure()
+    f1.suptitle('og_image')
+    io.imshow(og_image)
     
-    cut_image = np.multiply(val_gen.__getitem__(0)[0][0], b)
+    # tresholding
+    th1, binary_pred = cv2.threshold(np.squeeze(prediction),0.1,1,cv2.THRESH_BINARY)
+    binary_pred = np.uint8(binary_pred)
+    f2 = plt.figure()
+    f2.suptitle('binary_pred')
+    io.imshow(binary_pred)
+    
+    # opening
+    kern_radius = 5
+    kernel = np.ones((kern_radius,kern_radius),np.uint8)
+    open_mask = cv2.morphologyEx(binary_pred, cv2.MORPH_OPEN, kernel, iterations = 2)
+    
+    # multiplying threshold with og image
+    cut_image = np.multiply(og_image, open_mask)
+    f3 = plt.figure()
+    f3.suptitle('cut_image')
     io.imshow(cut_image)        
     
-    pupil_outline = cv2.HoughCircles(b, cv2.HOUGH_GRADIENT, 1.5, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+    # loading random image from database for tests
+    tst_img = io.imread(input_img_paths[0])
+    tst_gray = cv2.cvtColor(tst_img, cv2.COLOR_RGB2GRAY)
+    
+    # # contour trial
+    # cnt = find_contours(tst_img, open_mask)
+    # cv2.drawContours(tst_img, cnt,  -1, (255,0,0), 2)
+    # cv2.imshow('Objects Detected',tst_img)
+    
+    #%% Hough Circles Trial
+    pred_sq = np.squeeze(prediction)*255
+    pred_sq_uint8 = np.uint8(pred_sq)
+    pred_sq_uint8_mShift = mean_shift(pred_sq_uint8)
+    # pred_sq_uint8_mShift_RGB = cv2.cvtColor(pred_sq_uint8_mShift, cv2.COLOR_GRAY2BGR)
+
+    
+    og_copy = cv2.cvtColor(og_image, cv2.COLOR_GRAY2BGR)
+    # pupil_outline = cv2.HoughCircles(open_mask.astype(np.uint8), cv2.HOUGH_GRADIENT, 1.2, 1, 100)
+    
+    # # loading random image from database for tests
+    # tst_img = io.imread(input_img_paths[0])
+    # tst_gray = cv2.cvtColor(tst_img, cv2.COLOR_RGB2GRAY)
+    
+    # Hough Circles
+    pupil_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=50)
+    pupil_outline = np.uint16(np.around(pupil_outline))
+    
+    
+    iris_outline = iris_outline = cv2.HoughCircles(pred_sq_uint8_mShift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    iris_outline = np.uint16(np.around(pupil_outline))
+    
+    canvas = np.ones_like(og_image)
+
+    for i in pupil_outline[0, :]:
+            # draw the outer circle
+            cv2.circle(og_copy, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            # draw the center of the circle
+            cv2.circle(og_copy, (i[0], i[1]), 2, (0, 0, 255), 3)    
+    for i in iris_outline[0, :]:
+            # draw the outer circle
+            cv2.circle(og_copy, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            # draw the center of the circle
+            cv2.circle(og_copy, (i[0], i[1]), 2, (0, 0, 255), 3) 
+    f3 = plt.figure()
+    f3.suptitle('circle_img')
+    io.imshow(og_copy)
+    
+
+    
+    center = (np.squeeze(pupil_outline)[0], np.squeeze(pupil_outline)[1])
+    max_rad = np.squeeze(iris_outline)[2]
+    
+    strip = stripTease(og_image, center, max_rad*2)
+    f4 = plt.figure()
+    f4.suptitle('strip')
+    io.imshow(strip)
+    #%%
+    # # distance map
+    # inverted_mask = cv2.bitwise_not(open_mask)-254
+    # dist_im = cv2.distanceTransform(inverted_mask, cv2.DIST_L2, 3)
+    # cv2.normalize(dist_im, dist_im, 0, 1.0, cv2.NORM_MINMAX)
+    # f4 = plt.figure()
+    # f4.suptitle('distance map')
+    # io.imshow(dist_im)
+    
+    # closest_distance = 9999
+    # center_of_image = (np.floor(img_size[0]/2), np.floor(img_size[1]/2))
+    # euc = distance.euclidean((0,0), center_of_image)
+    # brightest_point = dist_im[0,0]
+    # imVal_sort = np.sort(dist_im)
+    
+    # all_dist = []
+    
+    # for i in range(img_size[0]):
+    #     for j in range(img_size[1]):
+    #         all_dist.append(distance.euclidean((i,j), center_of_image))
+    
+    # all_dist_array = np.reshape(all_dist, img_size)
+    # for i in range(img_size[0]):
+    #     for j in range(img_size[1]):
+    #         if 
+            
+    # for i in range(img_size[0]):
+    #     for j in range(img_size[1]):
+    #         if (dist_im[i,j]>dist_im[i-1,j-1]):
+    #             if (distance.euclidean((i,j), center_of_image) < closest_distance):
+    #                 closest_distance = distance.euclidean((i,j), center_of_image)
+    #                 pupil_center = (i,j)
+    
+    # f4 = plt.figure()
+    # f4.suptitle('strip')
+    # io.imshow(strip)
     
     #%% POLAR TRANSFORM
 

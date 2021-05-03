@@ -47,7 +47,9 @@ class IrisImageDatabase(keras.utils.Sequence):
             y[j] = tf.math.divide(y[j],255)
         return x, y
 
-def daugman_normalizaiton(image, r_in, r_out, height = img_size[0], width = img_size[1]):
+def daugman_normalizaiton(image, r_in, r_out, img_size):
+    height = img_size[0]
+    width = img_size[1]
     thetas = np.arange(0, 2 * np.pi, 2 * np.pi / width)  # Theta values
     r_out = r_in + r_out
     # Create empty flatten image
@@ -81,31 +83,43 @@ def mean_shift(ms_in):
     ms_img = cv2.cvtColor(ms_img, cv2.COLOR_BGR2GRAY)
     return ms_img
 
-def draw_circles(img):
-    medianBlurim = cv2.medianBlur(img, 5)
-    pupil_outline = cv2.HoughCircles(medianBlurim, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
+def get_circles(img):
+    """
+    Circle defined as: x_center, y_center, radius
 
-    pupil_outline = np.uint16(np.around(pupil_outline))
-    
+    Parameters
+    ----------
+    img : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    img : TYPE
+        DESCRIPTION.
+    iris_outline : TYPE
+        DESCRIPTION.
+    pupil_outline : TYPE
+        DESCRIPTION.
+
+    """
+    # medianBlurim = cv2.medianBlur(img, 5)
+    pupil_outline = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
     # Mean shift filtering
     m_shift = mean_shift(img)
-    
     iris_outline = cv2.HoughCircles(m_shift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
-    print(iris_outline)
-    iris_outline = np.uint16(np.around(iris_outline))
     
-    for i in iris_outline[0, :]:
-        # draw the outer circle
-        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-        # draw the center of the circle
-        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
-    
-    for i in pupil_outline[0, :]:
-        # draw the outer circle
-        cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
-        # draw the center of the circle
-        cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
-    return img, iris_outline, pupil_outline
+    return iris_outline, pupil_outline
+
+def draw_circles(img, circles):
+    if circles is not None:
+        for i in circles[0, :]:
+            # draw the outer circle
+            cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            # draw the center of the circle
+            cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
+
+    cv2.imshow('circles', img)
+    return img
 
 def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size):
     val_samples = int(len(target_img_paths)*val_percent/100)
