@@ -298,6 +298,7 @@ if __name__ == '__main__':
     f4 = plt.figure()
     f4.suptitle('strip')
     io.imshow(strip)
+    
     #%%
     # # distance map
     # inverted_mask = cv2.bitwise_not(open_mask)-254
