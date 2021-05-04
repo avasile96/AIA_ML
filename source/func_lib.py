@@ -102,24 +102,53 @@ def get_circles(img):
         DESCRIPTION.
 
     """
-    # medianBlurim = cv2.medianBlur(img, 5)
-    pupil_outline = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=120)
-    # Mean shift filtering
-    m_shift = mean_shift(img)
-    iris_outline = cv2.HoughCircles(m_shift, cv2.HOUGH_GRADIENT, 1, 400, param1=100, param2=50)
+    #%% Hough Circles Trial
+    pred_sq = np.squeeze(prediction)*255
+    pred_sq_uint8 = np.uint8(pred_sq)
+    pred_sq_uint8_mShift = mean_shift(pred_sq_uint8)
+    # pred_sq_uint8_mShift_RGB = cv2.cvtColor(pred_sq_uint8_mShift, cv2.COLOR_GRAY2BGR)
+
     
-    return iris_outline, pupil_outline
+    og_copy = cv2.cvtColor(og_image, cv2.COLOR_GRAY2BGR)
+    f2 = plt.figure()
+    f2.suptitle('pred_sq_uint8')
+    io.imshow(pred_sq_uint8)
+    
+    # # loading random image from database for tests
+    # tst_img = io.imread(input_img_paths[0])
+    # tst_gray = cv2.cvtColor(tst_img, cv2.COLOR_RGB2GRAY)
+    
+    # Hough Circles
+    pupil_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=50)
+    pupil_outline = np.uint16(np.around(pupil_outline))
+    
+    
+    iris_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 2, minRadius = 180)
+    iris_outline = np.uint16(np.around(iris_outline))
+    
+    canvas = np.ones_like(og_image)
 
-def draw_circles(img, circles):
-    if circles is not None:
-        for i in circles[0, :]:
+    for i in pupil_outline[0, :]:
             # draw the outer circle
-            cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            cv2.circle(og_copy, (i[0], i[1]), i[2], (0, 255, 0), 2)
             # draw the center of the circle
-            cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)
-
-    cv2.imshow('circles', img)
-    return img
+            cv2.circle(og_copy, (i[0], i[1]), 2, (0, 0, 255), 3)    
+    for i in iris_outline[0, :]:
+            # draw the outer circle
+            cv2.circle(og_copy, (i[0], i[1]), i[2], (0, 255, 0), 2)
+            # draw the center of the circle
+            cv2.circle(og_copy, (i[0], i[1]), 2, (0, 0, 255), 3) 
+    f3 = plt.figure()
+    f3.suptitle('circle_img')
+    io.imshow(og_copy)
+    
+    center = (np.squeeze(pupil_outline)[0], np.squeeze(pupil_outline)[1])
+    max_rad = np.squeeze(iris_outline)[2]
+    
+    strip = stripTease(og_image, center, max_rad*2)
+    f4 = plt.figure()
+    f4.suptitle('strip')
+    io.imshow(strip)
 
 def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size):
     val_samples = int(len(target_img_paths)*val_percent/100)
@@ -202,3 +231,61 @@ def get_model(img_size, num_classes):
      
     model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
     return model
+
+def unet_seg():
+    # Free up RAM in case the model definition cells were run multiple times
+    keras.backend.clear_session()
+    # Import U-Net
+    
+    model = load_model('iris_unet.h5')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics = ['accuracy'])
+    # Get predictions (segment) images from the dataset
+    # "a" contains images segmented by UNet
+    a = model.predict(
+        val_gen, 
+        batch_size=2, 
+        verbose=2, 
+        steps=None, 
+        callbacks=None, 
+        max_queue_size=10,
+        workers=2, 
+        use_multiprocessing=False)
+    return fluffy_seg
+
+def distance_map_trial():
+    # distance map
+    inverted_mask = cv2.bitwise_not(open_mask)-254
+    dist_im = cv2.distanceTransform(inverted_mask, cv2.DIST_L2, 3)
+    cv2.normalize(dist_im, dist_im, 0, 1.0, cv2.NORM_MINMAX)
+    f4 = plt.figure()
+    f4.suptitle('distance map')
+    io.imshow(dist_im)
+    
+    closest_distance = 9999
+    center_of_image = (np.floor(img_size[0]/2), np.floor(img_size[1]/2))
+    euc = distance.euclidean((0,0), center_of_image)
+    brightest_point = dist_im[0,0]
+    imVal_sort = np.sort(dist_im)
+    
+    all_dist = []
+    
+    for i in range(img_size[0]):
+        for j in range(img_size[1]):
+            all_dist.append(distance.euclidean((i,j), center_of_image))
+    
+    all_dist_array = np.reshape(all_dist, img_size)
+    for i in range(img_size[0]):
+        for j in range(img_size[1]):
+            pass
+            
+    for i in range(img_size[0]):
+        for j in range(img_size[1]):
+            if (dist_im[i,j]>dist_im[i-1,j-1]):
+                if (distance.euclidean((i,j), center_of_image) < closest_distance):
+                    closest_distance = distance.euclidean((i,j), center_of_image)
+                    pupil_center = (i,j)
+    
+    f4 = plt.figure()
+    f4.suptitle('strip')
+    io.imshow(strip)
+    return 
