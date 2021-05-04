@@ -31,8 +31,7 @@ tf.debugging.set_log_device_placement(True)
 
 img_size = (240, 320)
 num_classes = 2
-batch_size = 2
-val_percent = np.floor(batch_size/100 * 2240)
+batch_size = 1
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
 project_dir = os.path.dirname(source_dir)
@@ -54,46 +53,30 @@ target_img_paths = [
 class IrisImageDatabase(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
 
-    def __init__(self, batch_size, img_size, input_img_paths, target_img_paths):
+    def __init__(self, batch_size, img_size, input_img_paths):
         self.batch_size = batch_size
         self.img_size = img_size
         self.input_img_paths = input_img_paths
-        self.target_img_paths = target_img_paths
 
     def __len__(self):
-        return len(self.target_img_paths) // self.batch_size
+        return len(self.input_img_paths) // self.batch_size
 
     def __getitem__(self, idx):
         """Returns tuple (input, target) correspond to batch #idx."""
         i = idx * self.batch_size
         batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
-        batch_target_img_paths = self.target_img_paths[i : i + self.batch_size]
-        # x = np.zeros((self.batch_size,) + self.img_size + (3,), dtype="float32")
         x = np.zeros((self.batch_size,) + self.img_size, dtype="float32")
         for j, path in enumerate(batch_input_img_paths):
             img = io.imread(path, as_gray = True)
             x[j] = img
-        # y = np.zeros((self.batch_size,) + self.img_size + (1,), dtype="uint8")
-        y = np.zeros((self.batch_size,) + self.img_size, dtype="uint8")
-        for j, path in enumerate(batch_target_img_paths):
-            img = load_img(path, target_size=self.img_size, color_mode="grayscale")
-            y[j] = img
-            y[j] = tf.math.divide(y[j],255)
-        return x, y
+        return x
 
 
-def GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size):
-    val_samples = int(len(target_img_paths)*val_percent/100)
+def GetInputGenerator(input_img_paths, batch_size, img_size):
     random.Random(1337).shuffle(input_img_paths)
-    random.Random(1337).shuffle(target_img_paths)
-    train_input_img_paths = input_img_paths[:-val_samples]
-    train_target_img_paths = target_img_paths[:-val_samples]
-    val_input_img_paths = input_img_paths[-val_samples:]
-    val_target_img_paths = target_img_paths[-val_samples:]
-    # Instantiate data Sequences for each split
-    train_gen = IrisImageDatabase(batch_size, img_size, train_input_img_paths, train_target_img_paths)
-    val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
-    return train_gen, val_gen
+    input_img_paths = input_img_paths
+    input_gen = IrisImageDatabase(batch_size, img_size, input_img_paths)
+    return input_gen
 
 def stripTease(seg_img, center, max_radius): # TODO
     flags = cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS
@@ -206,7 +189,8 @@ def polar_transform(im_from_gen, pred_of_im):
     # getting pupil circle (x_center, y_center, rad)
     pred_sq = np.squeeze(prediction)*255
     pred_sq_uint8 = np.uint8(pred_sq)
-    pupil_outline = cv2.HoughCircles(pred_sq_uint8, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=50)
+    open_mask_blur = cv2.GaussianBlur(open_mask,(5,5),0)
+    pupil_outline = cv2.HoughCircles(open_mask_blur, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=50)
     pupil_outline = np.uint16(np.around(pupil_outline))
     center = (np.squeeze(pupil_outline)[0], np.squeeze(pupil_outline)[1])
       
@@ -220,7 +204,7 @@ def polar_transform(im_from_gen, pred_of_im):
     strip = stripTease(cut_image, center, np.min(np.array(euc)))
     return strip
 
-def unet_seg(img):
+def unet_seg(unet_input, batch_size):
     # Free up RAM in case the model definition cells were run multiple times
     keras.backend.clear_session()
     # Import U-Net
@@ -230,8 +214,8 @@ def unet_seg(img):
     # Get predictions (segment) images from the dataset
     # "a" contains images segmented by UNet
     fluffy_seg = model.predict(
-        val_gen, 
-        batch_size=2, 
+        unet_input, 
+        batch_size=batch_size,
         verbose=2, 
         steps=None, 
         callbacks=None, 
@@ -242,34 +226,29 @@ def unet_seg(img):
 
 if __name__ == '__main__':
     
-    # Train-Validation Split
-    train_gen, val_gen = GetTestTrainGenerators(val_percent, input_img_paths, target_img_paths, batch_size, img_size)
-    idx = 2
-    im_from_gen = val_gen.__getitem__(idx)[0][0] # getting og image
+    # Generating UNet input
+    unet_input = GetInputGenerator(input_img_paths, batch_size, img_size)
     
     #%% SEGMENTATION
-    fluffy_seg = unet_seg(im_from_gen)
-    for i in range(fluffy_seg.shape[0]):
-        # f = plt.figure()
-        # f.suptitle("prediction {}". format(i))
-        # io.imshow(np.squeeze(fluffy_seg[i]))
-        
-        # f = plt.figure()
-        # f.suptitle("image {}". format(i))
-        # io.imshow(val_gen.__getitem__(i)[0][0])
-        
-        cut_im = np.multiply(np.squeeze(fluffy_seg[i]),val_gen.__getitem__(i)[0][0])
-        f = plt.figure()
-        f.suptitle("prediction {}". format(i))
-        io.imshow(val_gen.__getitem__(i)[0][0])
-        
-    
-    im_grom_seg = fluffy_seg[0]
-    
-    #%% POLAR TRANSFORM
-    strip = polar_transform(im_from_gen, im_grom_seg)
+    fluffy_seg = unet_seg(unet_input, batch_size)
 
     
+    #%% SEG TEST
+    im_from_gen = unet_input.__getitem__(0)[0] # getting og image
+    img_from_seg = fluffy_seg[0] #getting seg image
+    
+    f = plt.figure()
+    f.suptitle("im_from_gen")
+    io.imshow(im_from_gen)
+    
+    f = plt.figure()
+    f.suptitle("img_from_seg")
+    io.imshow(img_from_seg)
+        
+    
+    #%% POLAR TRANSFORM
+    strip = polar_transform(im_from_gen, img_from_seg)
+
     f3 = plt.figure()
     f3.suptitle('strip')
     io.imshow(strip)  

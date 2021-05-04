@@ -1,0 +1,8 @@
+This file contains suggestions for improvement.
+Improvements should be made only after a working version of the complete project.
+(DB processing, Segmentation, Feature Extraction, Machine Learning --> Classification)
+
+DB Procssing:
+
+Segmentation:
+	- Morphological transformation for UNet output improvment
