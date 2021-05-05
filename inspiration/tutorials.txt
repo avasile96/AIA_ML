@@ -19,3 +19,6 @@ https://github.com/pctroll/computer-vision/blob/master/iris_recognition/iris_rec
 
 https://www.youtube.com/watch?v=azM57JuQpQI
 	UNet Tutorial
+
+https://pypi.org/project/pupil-detectors/
+	Pupil Detection

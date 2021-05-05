@@ -1,0 +1,4 @@
+1. UNet works perfectly, but would it be a good idea to overfit it to this dataset?
+We know it's unethical but for the purpouses of this project, it owuld be best?
+
+2. 

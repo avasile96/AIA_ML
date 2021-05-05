@@ -102,12 +102,22 @@ def get_circles(img):
         DESCRIPTION.
 
     """
-    #%% Hough Circles Trial
+    #% Hough Circles Trial
     pred_sq = np.squeeze(prediction)*255
     pred_sq_uint8 = np.uint8(pred_sq)
     pred_sq_uint8_mShift = mean_shift(pred_sq_uint8)
     # pred_sq_uint8_mShift_RGB = cv2.cvtColor(pred_sq_uint8_mShift, cv2.COLOR_GRAY2BGR)
 
+        # HOUGH CIRCLES: getting pupil circle (x_center, y_center, rad)
+    # pred_sq = np.squeeze(prediction)*255
+    # pred_sq_uint8 = np.uint8(pred_sq)
+    # open_mask_blur = cv2.GaussianBlur(open_mask,(5,5),0)
+    # pupil_outline = cv2.HoughCircles(open_mask_blur, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=50, minRadius=20, maxRadius=50)
+    # if (pupil_outline is None):
+    #     center = (np.floor(img_size[0]/2),np.floor(img_size[1]/2))
+    # else:
+    #     pupil_outline = np.uint16(np.around(pupil_outline))
+    #     center = (np.squeeze(pupil_outline)[0], np.squeeze(pupil_outline)[1])
     
     og_copy = cv2.cvtColor(og_image, cv2.COLOR_GRAY2BGR)
     f2 = plt.figure()
