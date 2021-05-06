@@ -23,3 +23,5 @@ Take papers of iris recognition doing wavelet
 
 Deep Learning for classification (recognition) --> resnet
 
+Feature reduction --> PCA
+
