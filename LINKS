@@ -1,0 +1,28 @@
+LINKS FOR GABOR FILTERS
+
+https://corpocrat.com/2015/03/25/applying-gabor-filter-on-faces-using-opencv/
+
+HOW GABOR FILTERS WORK
+https://cvtuts.wordpress.com/2014/04/27/gabor-filters-a-practical-overview/
+https://medium.com/@anuj_shah/through-the-eyes-of-gabor-filter-17d1fdb3ac97
+
+LOG GABOR
+https://nbviewer.jupyter.org/github/bicv/LogGabor/blob/master/LogGabor.ipynb
+
+IDEA OF WHAT TO DO AND WITH WHAT
+https://answers.opencv.org/question/50975/gabor-kernel-parameters-in-opencv/
+
+
+
+
+LINKS FOR SCIKIT LEARN
+https://scikit-learn.org/stable/modules/feature_extraction.html#image-feature-extraction
+https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.image.extract_patches_2d.html#examples-using-sklearn-feature-extraction-image-extract-patches-2d
+https://scikit-learn.org/stable/auto_examples/cluster/plot_dict_face_patches.html#sphx-glr-auto-examples-cluster-plot-dict-face-patches-py
+https://scikit-learn.org/stable/modules/feature_selection.html#feature-selection
+
+
+
+PAPER TO READ
+https://www.sciencedirect.com/science/article/pii/B9780081007051000051
+
