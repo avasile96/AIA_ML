@@ -79,12 +79,14 @@ if __name__ == '__main__':
     
     x = np.squeeze(fluffy_seg)*np.squeeze(unet_input) # masks * og_imgs
     
+    #%% MODEL 
+    
     print("[INFO] loading network...")
     res_model = ResNet50(weights="imagenet", include_top=False)
     
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
-    model.compile(optimizer='adam',
+    res_model.compile(optimizer='adam',
                   loss=loss_fn,
                   metrics=['accuracy'])
     
