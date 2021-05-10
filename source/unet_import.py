@@ -73,17 +73,24 @@ class IrisImageDatabase(keras.utils.Sequence):
             x[j] = img
         return x
 
-
-def GetInputGenerator(input_img_paths, batch_size, img_size):
+def GetInputGenerator(input_img_paths, batch_size, img_size, return_labels = False):
     random.Random(1337).shuffle(input_img_paths)
     input_img_paths = input_img_paths
     input_gen = IrisImageDatabase(batch_size, img_size, input_img_paths)
-    return input_gen
+    idx = []
+    for i in input_img_paths:
+        idx.append(int(i[33:36]))
+        
+    if (return_labels == True):
+        return input_gen, idx
+    else:
+        return input_gen
 
 def stripTease(seg_img, center, max_radius): # TODO
     flags = cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS
     final_strip = cv2.linearPolar(seg_img, center, max_radius, flags)
     return final_strip
+
 
 def get_model(img_size, num_classes):
     #Build the model
