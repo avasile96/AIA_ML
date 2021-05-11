@@ -16,6 +16,7 @@ import cv2
 from keras.models import load_model
 import matplotlib.pyplot as plt
 from unet_import import GetInputGenerator, unet_seg, polar_transform
+from skimage.color import gray2rgb
 
 tf.debugging.set_log_device_placement(True)
 
@@ -77,12 +78,26 @@ if __name__ == '__main__':
     from tensorflow.keras.preprocessing.image import img_to_array
     from tensorflow.keras.preprocessing.image import load_img
     
-    x = np.squeeze(fluffy_seg)*np.squeeze(unet_input) # masks * og_imgs
+    dim = (224, 224)
     
+    og_image_resized = np.zeros_like(fluffy_seg)
+    
+    for idx in range(og_image_resized.shape[0]):
+        img = unet_input[idx, :, :, :]
+        og_resized = cv2.resize(img, dsize = dim, interpolation = cv2.INTER_AREA)
+        og_resized_stack[idx, :, :, :] = og_resized
+        
+    
+    for idx in range(len(img_stack)):
+        og_resized = cv2.resize(unet_input, dsize = dim, interpolation = cv2.INTER_AREA)
+    
+    x = gray2rgb(np.squeeze(fluffy_resized)*np.squeeze(og_resized)) # masks * og_imgs
+
+
     #%% MODEL 
     
     print("[INFO] loading network...")
-    res_model = ResNet50(weights="imagenet", include_top=False)
+    res_model = ResNet50(weights="imagenet", include_top=True)
     
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
@@ -90,7 +105,7 @@ if __name__ == '__main__':
                   loss=loss_fn,
                   metrics=['accuracy'])
     
-    res_model.fit(x = x, y = labels)
+    res_model.fit(x = x, y = np.array(labels))
     
     features = res_model.predict(img_from_seg)
     features = features.reshape((features.shape[0], 7 * 7 * 2048))
