@@ -80,24 +80,18 @@ if __name__ == '__main__':
     
     dim = (224, 224)
     
-    og_image_resized = np.zeros_like(fluffy_seg)
+    x_resized = np.zeros([2240,224,224,3])
+
+    x = gray2rgb(np.squeeze(fluffy_seg)*np.squeeze(unet_input)) # masks * og_imgs
     
-    for idx in range(og_image_resized.shape[0]):
-        img = unet_input[idx, :, :, :]
-        og_resized = cv2.resize(img, dsize = dim, interpolation = cv2.INTER_AREA)
-        og_resized_stack[idx, :, :, :] = og_resized
-        
-    
-    for idx in range(len(img_stack)):
-        og_resized = cv2.resize(unet_input, dsize = dim, interpolation = cv2.INTER_AREA)
-    
-    x = gray2rgb(np.squeeze(fluffy_resized)*np.squeeze(og_resized)) # masks * og_imgs
+    for idx in range(x_resized.shape[0]): 
+        x_resized[idx, :, :] = cv2.resize(x[idx], dsize = dim, interpolation = cv2.INTER_AREA)
 
 
     #%% MODEL 
     
     print("[INFO] loading network...")
-    res_model = ResNet50(weights="imagenet", include_top=True)
+    res_model = ResNet50(weights="imagenet", include_top=False)
     
     loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
@@ -105,8 +99,10 @@ if __name__ == '__main__':
                   loss=loss_fn,
                   metrics=['accuracy'])
     
-    res_model.fit(x = x, y = np.array(labels))
+    res_pred = res_model.predict(x_resized)
     
-    features = res_model.predict(img_from_seg)
-    features = features.reshape((features.shape[0], 7 * 7 * 2048))
+    feet = res_model.fit(x = x_resized, y = np.array(labels))
+    
+    # features = res_model.predict(img_from_seg)
+    # features = features.reshape((features.shape[0], 7 * 7 * 2048))
 

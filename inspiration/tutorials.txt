@@ -24,4 +24,7 @@ https://pypi.org/project/pupil-detectors/
 	Pupil Detection
 
 https://www.pyimagesearch.com/2019/05/27/keras-feature-extraction-on-large-datasets-with-deep-learning/
+	ResNet Recognition
+
+https://www.pyimagesearch.com/2019/05/27/keras-feature-extraction-on-large-datasets-with-deep-learning/
 	Feature extraction with Deep Learning
