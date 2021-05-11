@@ -10,13 +10,11 @@ import gc
 import numpy as np
 from skimage import io
 import tensorflow as tf
-from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import load_img
 import keras
 from skimage.color import gray2rgb
-from skimage.transform import rescale, resize, downscale_local_mean
-from PIL import ImageMath
-from skimage import io
+from skimage.transform import resize
+
 
 tf.debugging.set_log_device_placement(True)
 
@@ -128,8 +126,8 @@ class IrisImageDatabase(keras.utils.Sequence):
 
 def get_model(img_size, num_classes):
     #Build the model
-    IMG_HEIGHT = 240
-    IMG_WIDTH = 320
+    IMG_HEIGHT = img_size[0]
+    IMG_WIDTH = img_size[1]
     IMG_CHANNELS = 1
     inputs = tf.keras.layers.Input((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS))
     s = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
@@ -245,5 +243,6 @@ if __name__ == '__main__':
     keras.backend.clear_session()
     
     preds_train = model.predict(train_gen)
+    gc.collect()
 
 
