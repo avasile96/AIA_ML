@@ -10,10 +10,7 @@ import gc
 import numpy as np
 from skimage import io
 import tensorflow as tf
-import keras
-import random
 import cv2
-from keras.models import load_model
 import matplotlib.pyplot as plt
 from unet_import import GetInputGenerator, unet_seg, polar_transform
 from skimage.color import gray2rgb
@@ -71,13 +68,9 @@ if __name__ == '__main__':
     f.suptitle("strips")
     io.imshow(strips[0])
         
-    #%% FEATURE EXTRACTION
-    from sklearn.preprocessing import LabelEncoder
+    #%% PREPROCESSING
     from tensorflow.keras.applications import ResNet50
-    from tensorflow.keras.applications.resnet50 import preprocess_input
-    from tensorflow.keras.preprocessing.image import img_to_array
-    from tensorflow.keras.preprocessing.image import load_img
-    
+
     dim = (224, 224)
     
     x_resized = np.zeros([2240,224,224,3])
@@ -88,21 +81,30 @@ if __name__ == '__main__':
         x_resized[idx, :, :] = cv2.resize(x[idx], dsize = dim, interpolation = cv2.INTER_AREA)
 
 
-    #%% MODEL 
+    #%% FEATURE EXTRACTION
+    
+    del unet_input, fluffy_seg, x, im_from_gen, img_from_seg
     
     print("[INFO] loading network...")
     res_model = ResNet50(weights="imagenet", include_top=False)
     
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-
-    res_model.compile(optimizer='adam',
-                  loss=loss_fn,
-                  metrics=['accuracy'])
+    features = res_model.predict(x_resized, batch_size=batch_size)
+    features_mod = features.reshape((features.shape[0], 7 * 7 * 2048))
     
-    res_pred = res_model.predict(x_resized)
+    #%% SAVING VEATURES TO CSV
+    csvPath = os.path.sep.join([project_dir, "features.csv"])
+    csv = open(csvPath, "w")
     
-    feet = res_model.fit(x = x_resized, y = np.array(labels))
+    for (label, vec) in zip(labels, features_mod):
+        # construct a row that exists of the class label and
+        # extracted features
+        vec = ",".join([str(v) for v in vec])
+        csv.write("{},{}\n".format(label, vec))
+        
+    csv.close()
     
-    # features = res_model.predict(img_from_seg)
-    # features = features.reshape((features.shape[0], 7 * 7 * 2048))
+    del features
+    del x_resized
+    gc.collect()
+    
 
