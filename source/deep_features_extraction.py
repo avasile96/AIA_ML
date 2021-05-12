@@ -82,7 +82,6 @@ if __name__ == '__main__':
 
 
     #%% FEATURE EXTRACTION
-    
     del unet_input, fluffy_seg, x, im_from_gen, img_from_seg
     
     print("[INFO] loading network...")
