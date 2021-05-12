@@ -1,0 +1,27 @@
+1. UNet works perfectly, but would it be a good idea to overfit it to this dataset?
+We know it's unethical but for the purpouses of this project, it owuld be best?
+
+2. Is this polar transformation good enough or should we get rid of the black?
+
+3. Besides Gabor & Harr do you have any other suggestions?
+
+4. Does the rule of thumb for number of features still apply with 10 images/patient?
+
+5. Any suggestions for Multiclass Cassifiers? I know SVMs work best for binary.
+
+6. Dimensionality reduction in feature space?
+
+7. Ensemble methods?
+
+Feature extraction (deep learning):
+	Autoencoder for feature extraction
+	Clustering technique for classification if features are deep
+
+Smaller the image input, shallower the network
+
+Take papers of iris recognition doing wavelet
+
+Deep Learning for classification (recognition) --> resnet
+
+Feature reduction --> PCA
+
