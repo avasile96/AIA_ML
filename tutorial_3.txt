@@ -1,0 +1,29 @@
+File "D:\Uni\AIA\AIA_ML\source\deep_features_classification.py", line 86, in __getitem__
+    label = to_categorical(label, num_classes=numClasses)[np.newaxis].T
+
+  File "D:\Anaconda\envs\ml\lib\site-packages\tensorflow\python\keras\utils\np_utils.py", line 78, in to_categorical
+    categorical[np.arange(n), y] = 1
+
+IndexError: index 224 is out of bounds for axis 1 with size 224
+
+#######################
+
+WARNING:tensorflow:Your input ran out of data; interrupting training. Make sure that your dataset or generator can generate at least `steps_per_epoch * epochs` batches (in this case, 44800 batches). You may need to use the repeat() function when building your dataset.
+2240/2240 - 90s - loss: 9.1570 - accuracy: 0.0031
+Executing op DeleteIterator in device /job:localhost/replica:0/task:0/device:CPU:0
+
+Polar transform image for image 
+
+ResNet50 may be too much, try 18?
+
+Recommended: custom-designed autoencoders
+
+convolutional autoencoder --> 2-3 blocks of "autoencoding"?
+
+dimensionality reduction (this is why autoencoders are good)
+
+for classification try knn, or other statistical methods
+
+Manuel:
+- measure segmentation performance
+- ROC curves, metric

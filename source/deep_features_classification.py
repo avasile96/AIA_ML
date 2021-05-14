@@ -26,8 +26,8 @@ tf.debugging.set_log_device_placement(True)
 
 
 img_size = (240, 320)
-num_classes = 2
-batch_size = 10
+num_classes = 224
+batch_size = 1
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
 project_dir = os.path.dirname(source_dir)
@@ -44,30 +44,15 @@ db_path = big_file_dir+"\\features.csv"
 # features = db_np[:,1:]
 
 
-
-input_img_paths = []
-for patient_index in os.listdir(os.path.join(dataset_dir, 'images')):
-    if os.path.isdir(os.path.join(dataset_dir, 'images', patient_index)):
-        # patient_dir = os.path.join(dataset_dir, 'images', patient_index)
-        for fname in os.listdir(os.path.join(dataset_dir, 'images', patient_index)):
-            if fname.endswith(".bmp") and not fname.startswith("."):
-                input_img_paths.append(os.path.join(dataset_dir, 'images', patient_index, fname))
-
-target_img_paths = [
-        os.path.join(dataset_dir, 'groundtruth', fname)
-        for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
-        if fname.endswith(".tiff") and not fname.startswith(".")]
-
 class FeaturesLabelsData(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
 
-    def __init__(self, batch_size, db_path, numClasses, mode = 'train'):
+    def __init__(self, batch_size, db_path, mode = 'train'):
         self.batch_size = batch_size
         self.db_path = db_path
         self.file = open(db_path,'r')
         self.reader = csv.reader(self.file)
         self.mode = mode
-        self.numClasses = numClasses
         
     def __len__(self):
         return len(list(self.reader)) // self.batch_size
@@ -78,6 +63,7 @@ class FeaturesLabelsData(keras.utils.Sequence):
             # initialize our batch of data and labels
             data = []
             labels = []
+            numClasses = 225
             # keep looping until we reach our batch size
             while len(data) < self.batch_size:
                 # attempt to read the next row of the CSV file
@@ -97,36 +83,38 @@ class FeaturesLabelsData(keras.utils.Sequence):
                 # extract the class label and features from the row
                 row = row.strip().split(",")
                 label = row[0]
-                label = to_categorical(label, num_classes=self.numClasses)
+                label = to_categorical(label, num_classes=numClasses)[np.newaxis].T
                 features = np.array(row[1:], dtype="float")
                 # update the data and label lists
                 data.append(features)
                 labels.append(label)
+                
                 # yield the batch to the calling function
-            return (np.array(data), np.array(labels))
+            return (np.squeeze(np.array(data)).reshape(-1, 100352), np.squeeze(np.array(labels)).reshape(-1, 225))
 
 if __name__ == '__main__':
     
     # Reading from csv
-    db = pd.read_csv(big_file_dir+"\\features.csv")
-    db_np = db.to_numpy()
+    # db = pd.read_csv(big_file_dir+"\\features.csv")
+    # db_np = db.to_numpy()
     
     # Getting labels and features
-    labels = db_np[:,0]
-    classes = np.unique(labels)
-    nr_of_classes = classes.shape[0]
-    features = db_np[:,1:]
+    # labels = db_np[:,0]
+    # classes = np.unique(labels)
+    # nr_of_classes = classes.shape[0]
+    # features = db_np[:,1:]
     
-    # Scaling
-    features_scaled = MinMaxScaler().fit_transform(features)
+    # # Scaling
+    # features_scaled = MinMaxScaler().fit_transform(features)
     
     #%% Abit of data exploration
-    nonzero_element_count = np.count_nonzero(features_scaled)
-    zero_element_count = features_scaled.size - np.count_nonzero(features_scaled)
+    # nonzero_element_count = np.count_nonzero(features_scaled)
+    # zero_element_count = features_scaled.size - np.count_nonzero(features_scaled)
     
     # Generator from csv
-    train_gen = FeaturesLabelsData(batch_size, db_path, nr_of_classes, mode = 'train')
-    del db, db_np, features
+    train_gen = FeaturesLabelsData(batch_size, db_path, mode = 'train')
+    # del db, db_np, features
+    
     #%% Model
     # define our simple neural network
     """
@@ -136,24 +124,26 @@ if __name__ == '__main__':
     In this case, the closest power of 2 to 100352 is 256. The square root of 256
     is then 16, thus giving us our architecture definition.
     """
-    # model = Sequential()
-    # model.add(Dense(256, input_shape=(7 * 7 * 2048,), activation="relu"))
-    # model.add(tf.keras.layers.Dropout(0.2))
-    # model.add(Dense(16, activation="relu"))
-    # model.add(tf.keras.layers.Dropout(0.2))
-    # model.add(Dense(nr_of_classes))
-    model = tf.keras.models.Sequential([
-              tf.keras.layers.Flatten(input_shape=(7 * 7 * 2048,)),
-              tf.keras.layers.Dense(512, activation='relu'),
-              tf.keras.layers.Dropout(0.2),
-              tf.keras.layers.Dense(nr_of_classes)
-              ])
+    model = Sequential()
+    model.add(Dense(512, input_shape=(7 * 7 * 2048,), activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.2))
+    model.add(Dense(256, activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.2))
+    model.add(Dense(225))
+    # model = tf.keras.models.Sequential([
+    #           tf.keras.layers.Dense(input_shape=(7 * 7 * 2048,)),
+    #           tf.keras.layers.Dense(512, activation='relu'),
+    #           tf.keras.layers.Dropout(0.2),
+    #           tf.keras.layers.Dense(num_classes)
+    #           ])
     # compile the model
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    # loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
+    loss_fn = tf.keras.losses.CategoricalCrossentropy()
+
     model.compile(loss=loss_fn, optimizer='adam',
     	metrics=["accuracy"])
     # Train 
-    history = model.fit(train_gen, epochs=20)
+    history = model.fit(train_gen, epochs=20, verbose = 2, batch_size = batch_size)
     # Evaluate
     # model.evaluate(features_scaled,  labels, verbose=2)    
 
