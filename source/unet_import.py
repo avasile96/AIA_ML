@@ -13,17 +13,17 @@ import gc
 import numpy as np
 from skimage import io
 import tensorflow as tf
-
 import keras
 from skimage.color import gray2rgb
 from skimage.transform import rescale, resize, downscale_local_mean
 import random
 import cv2
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 from func_lib import get_circles, mean_shift
 from im_proc import draw_circles
 from scipy.spatial import distance
+from sklearn.preprocessing import MinMaxScaler
 
 tf.debugging.set_log_device_placement(True)
 
@@ -77,11 +77,10 @@ def GetInputGenerator(input_img_paths, batch_size, img_size, return_labels = Fal
     random.Random(1337).shuffle(input_img_paths)
     input_img_paths = input_img_paths
     input_gen = IrisImageDatabase(batch_size, img_size, input_img_paths)
-    idx = []
-    for i in input_img_paths:
-        idx.append(int(i[33:36]))
-        
     if (return_labels == True):
+        idx = []
+        for i in input_img_paths:
+            idx.append(int(i[33:36]))
         return input_gen, idx
     else:
         return input_gen
@@ -249,7 +248,7 @@ def polar_transform(im_from_gen, pred_of_im):
 
 def unet_seg(unet_input, batch_size):
     # Free up RAM in case the model definition cells were run multiple times
-    keras.backend.clear_session()
+    # keras.backend.clear_session()
     # Import U-Net
     
     model = load_model('iris_unet.h5')
@@ -294,15 +293,38 @@ if __name__ == '__main__':
     io.imshow(strips[0])
         
     #%% STRIP SAVING ROUTINE
-    strips = []
+    
+    # masks = []
+    # mask_folder = os.path.join(os.path.dirname(project_dir), 'unet_masks')
     # for i in range(fluffy_seg.shape[0]):
 
-        # im_from_gen = unet_input.__getitem__(i)[0] # getting og image
-        # img_from_seg = fluffy_seg[i] #getting seg image
+    #     im_from_gen = unet_input.__getitem__(i)[0] # getting og image
+    #     img_from_seg = fluffy_seg[i] #getting seg image
         
-        # strips.append(polar_transform(im_from_gen, img_from_seg))
+    #     masks.append(img_from_seg)
         
-        # strip_fname = '{}\\strip_{}.png'.format(strip_folder, i)
-        # io.imsave(strip_fname, strips[i])
+    #     mask_fname = '{}\\mask_{}.tiff'.format(mask_folder, i)
+    #     io.imsave(mask_fname, masks[i])
+    
+    #%% STRIP SAVING ROUTINE
+    # from sklearn.preprocessing import MinMaxScaler
+    # strips = []
+    # strip_folder = os.path.join(os.path.dirname(project_dir), 'strips')
+    # for i in range(fluffy_seg.shape[0]):
+
+    #     im_from_gen = unet_input.__getitem__(i)[0] # getting og image
+    #     img_from_seg = fluffy_seg[i] #getting seg image
+        
+    #     strip_im = polar_transform(im_from_gen, img_from_seg)
+    #     # t = MinMaxScaler(feature_range=(0, 1), copy=True)
+    #     # t.fit(strip_im)
+    #     # strip_norm = t.transform(strip_im)
+        
+    #     # strip_norm = cv2.normalize(strip_im, 0, 255, cv2.NORM_MINMAX)
+        
+    #     strips.append(strip_im)
+        
+    #     strip_fname = '{}\\strip_{}.tiff'.format(strip_folder, i)
+    #     io.imsave(strip_fname, strips[i])
     
 

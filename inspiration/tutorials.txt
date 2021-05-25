@@ -28,3 +28,9 @@ https://www.pyimagesearch.com/2019/05/27/keras-feature-extraction-on-large-datas
 
 https://www.pyimagesearch.com/2019/05/27/keras-feature-extraction-on-large-datasets-with-deep-learning/
 	Feature extraction with Deep Learning
+
+https://github.com/Microsoft/MMdnn
+	Microsoft research for resnet 18
+
+https://github.com/qubvel/classification_models
+	Classification models

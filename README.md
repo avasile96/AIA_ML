@@ -20,3 +20,6 @@ import matplotlib.pyplot as plt
 Shallow Neural Net
 
 Autoencoder for feature selection for recognition
+
+Installing CUDA:
+https://spltech.co.uk/how-to-install-tensorflow-2-5-with-cuda-11-2-and-cudnn-8-1-for-windows-10/

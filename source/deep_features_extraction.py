@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon May 10 23:36:53 2021
-
-@author: vasil
+This script uses resnet 50 to extract deep features from iris images
+@author: alex
 """
 
 import os
@@ -79,7 +79,6 @@ if __name__ == '__main__':
     
     for idx in range(x_resized.shape[0]): 
         x_resized[idx, :, :] = cv2.resize(x[idx], dsize = dim, interpolation = cv2.INTER_AREA)
-
 
     #%% FEATURE EXTRACTION
     del unet_input, fluffy_seg, x, im_from_gen, img_from_seg
