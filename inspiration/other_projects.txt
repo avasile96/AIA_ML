@@ -1,0 +1,5 @@
+https://github.com/andreibercu/iris-recognition/blob/master/iris_recognition.py
+
+https://github.com/thuyngch/Iris-Recognition <-- interesting (saw this referenced in a stackoverflow answer)
+
+https://stackoverflow.com/questions/61490080/iris-recognition-system-opencv
