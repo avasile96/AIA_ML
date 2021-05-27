@@ -299,3 +299,36 @@ def distance_map_trial():
     f4.suptitle('strip')
     io.imshow(strip)
     return 
+
+class PredictionData(keras.utils.Sequence):
+    """Helper to iterate over the data (as Numpy arrays)."""
+
+    def __init__(self, batch_size, img_size, input_img_paths, return_labels):
+        self.batch_size = batch_size
+        self.img_size = img_size
+        self.input_img_paths = input_img_paths
+        self.return_labels = return_labels
+
+    def __len__(self):
+        return len(self.input_img_paths) // self.batch_size
+
+    def __getitem__(self, idx):
+        """Returns tuple (input, target) correspond to batch #idx."""
+        i = idx * self.batch_size
+        batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
+        x = np.zeros((self.batch_size,) + self.img_size, dtype="float32")
+        index = []
+        for j, path in enumerate(batch_input_img_paths):
+            img = io.imread(path, as_gray = True)
+            x[j] = img
+            index.append(batch_input_img_paths[j][26:29])
+        # if (self.return_labels == True):
+        #     return x, index
+        # else:
+            return x
+
+def GetPredInput(input_img_paths, batch_size, img_size, return_labels = False):
+    # random.Random(1337).shuffle(input_img_paths)
+    input_img_paths = input_img_paths
+    input_gen = PredictionData(batch_size, img_size, input_img_paths, return_labels = return_labels)
+    return input_gen

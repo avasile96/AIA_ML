@@ -35,7 +35,7 @@ big_file_dir = os.path.dirname(project_dir)
 dataset_dir = os.path.join(project_dir, 'dataset')
 strip_folder = os.path.join(source_dir, 'strips')
 # db = pd.read_csv(big_file_dir+"\\features.csv")
-db_path = big_file_dir+"\\features.csv"
+db_path = big_file_dir+"\\deep_features.csv"
 
 # # Getting labels and features
 # labels = db_np[:,0]
@@ -83,7 +83,7 @@ class FeaturesLabelsData(keras.utils.Sequence):
                 # extract the class label and features from the row
                 row = row.strip().split(",")
                 label = row[0]
-                label = to_categorical(label, num_classes=numClasses)[np.newaxis].T
+                # label = to_categorical(label, num_classes=numClasses)[np.newaxis].T
                 features = np.array(row[1:], dtype="float")
                 # update the data and label lists
                 data.append(features)
@@ -112,7 +112,10 @@ if __name__ == '__main__':
     # zero_element_count = features_scaled.size - np.count_nonzero(features_scaled)
     
     # Generator from csv
-    train_gen = FeaturesLabelsData(batch_size, db_path, mode = 'train')
+    # train_gen = FeaturesLabelsData(batch_size, db_path, mode = 'train')
+    train = pd.read_csv(db_path, header = None)
+    train_x
+    train_y
     # del db, db_np, features
     
     #%% Model

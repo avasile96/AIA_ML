@@ -52,6 +52,10 @@ target_img_paths = [
         for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
         if fname.endswith(".tiff") and not fname.startswith(".")]
 
+pat_label = []
+for i in range(len(input_img_paths)): 
+    pat_label.append(input_img_paths[i][33:36]) # getting patient labels
+
 class IrisImageDatabase(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
 
@@ -292,7 +296,7 @@ if __name__ == '__main__':
     f.suptitle("strips")
     io.imshow(strips[0])
         
-    #%% STRIP SAVING ROUTINE
+    #%% MASK SAVING ROUTINE
     
     # masks = []
     # mask_folder = os.path.join(os.path.dirname(project_dir), 'unet_masks')
@@ -307,24 +311,17 @@ if __name__ == '__main__':
     #     io.imsave(mask_fname, masks[i])
     
     #%% STRIP SAVING ROUTINE
-    # from sklearn.preprocessing import MinMaxScaler
     # strips = []
     # strip_folder = os.path.join(os.path.dirname(project_dir), 'strips')
     # for i in range(fluffy_seg.shape[0]):
-
     #     im_from_gen = unet_input.__getitem__(i)[0] # getting og image
     #     img_from_seg = fluffy_seg[i] #getting seg image
         
     #     strip_im = polar_transform(im_from_gen, img_from_seg)
-    #     # t = MinMaxScaler(feature_range=(0, 1), copy=True)
-    #     # t.fit(strip_im)
-    #     # strip_norm = t.transform(strip_im)
-        
-    #     # strip_norm = cv2.normalize(strip_im, 0, 255, cv2.NORM_MINMAX)
         
     #     strips.append(strip_im)
-        
-    #     strip_fname = '{}\\strip_{}.tiff'.format(strip_folder, i)
-    #     io.imsave(strip_fname, strips[i])
+    #     for j in range(10):
+    #         strip_fname = '{}\\patient_{}_strip_{}.tiff'.format(strip_folder,pat_label[i], j+1)
+    #         io.imsave(strip_fname, strips[i])
     
 
