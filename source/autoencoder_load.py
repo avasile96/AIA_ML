@@ -101,7 +101,7 @@ conv4 = Conv2D(256, (3, 3), activation='relu', padding='same', name = 'conv2d_35
 conv4 = BatchNormalization(name = 'batch_normalization_34')(conv4)
 conv4 = Conv2D(256, (3, 3), activation='relu', padding='same', name = 'conv2d_36')(conv4)
 conv4 = BatchNormalization(name = 'batch_normalization_35')(conv4)
-conv4 = Flatten
+conv4 = Flatten()
 
 conv5 = Conv2D(128, (3, 3), activation='relu', padding='same', name = 'conv2d_37')(conv4) #80 x 60 x 128
 conv5 = BatchNormalization(name = 'batch_normalization_36')(conv5)

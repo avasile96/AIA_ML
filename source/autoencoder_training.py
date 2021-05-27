@@ -161,9 +161,12 @@ conv4 = Conv2D(128, (3, 3), activation='relu', padding='same', name = 'conv2d_35
 conv4 = BatchNormalization(name = 'batch_normalization_34')(conv4)
 conv4 = Conv2D(128, (3, 3), activation='relu', padding='same', name = 'conv2d_36')(conv4)
 conv4 = BatchNormalization(name = 'batch_normalization_35')(conv4)
-conv4 = Flatten()
+conv4 = Reshape((-1,1))(conv4)
 
-conv5 = Conv2D(64, (3, 3), activation='relu', padding='same', name = 'conv2d_37')(conv4) #80 x 60 x 64
+encoded = Dense(units = 1, activation = 'relu')(conv4)
+
+decode = Reshape((60, 80, 128))(encoded)
+conv5 = Conv2D(64, (3, 3), activation='relu', padding='same', name = 'conv2d_37')(decode) #80 x 60 x 64
 conv5 = BatchNormalization(name = 'batch_normalization_36')(conv5)
 conv5 = Conv2D(64, (3, 3), activation='relu', padding='same', name = 'conv2d_38')(conv5)
 conv5 = BatchNormalization(name = 'batch_normalization_37')(conv5)
@@ -192,12 +195,13 @@ model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     monitor='loss',
     save_best_only=True)
 # fit the autoencoder model to reconstruct input
-history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = model_checkpoint_callback,
+history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = [],
                           verbose=1)
+features = autoencoder.predict(train_strips.__getitem__(0)[0])
 # Model Save
-autoencoder.save(
-    'autoencoder.h5', overwrite=True, include_optimizer=True, save_format=None,
-    signatures=None, options=None, save_traces=True)
+# autoencoder.save(
+#     'autoencoder.h5', overwrite=True, include_optimizer=True, save_format=None,
+#     signatures=None, options=None, save_traces=True)
 
 
 
