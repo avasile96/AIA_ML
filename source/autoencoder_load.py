@@ -16,6 +16,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import UpSampling2D
+from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import MaxPooling2D
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import BatchNormalization
@@ -100,6 +101,7 @@ conv4 = Conv2D(256, (3, 3), activation='relu', padding='same', name = 'conv2d_35
 conv4 = BatchNormalization(name = 'batch_normalization_34')(conv4)
 conv4 = Conv2D(256, (3, 3), activation='relu', padding='same', name = 'conv2d_36')(conv4)
 conv4 = BatchNormalization(name = 'batch_normalization_35')(conv4)
+conv4 = Flatten
 
 conv5 = Conv2D(128, (3, 3), activation='relu', padding='same', name = 'conv2d_37')(conv4) #80 x 60 x 128
 conv5 = BatchNormalization(name = 'batch_normalization_36')(conv5)
@@ -162,18 +164,18 @@ prediction_strips = GetPredInput(strip_img_paths, batch_size, img_size, return_l
 # features = autoencode(prediction_strips_tuple[0], batch_size = batch_size)
 features = []
 features_index = []
-# for i in range(prediction_strips.__len__()):
-# # im_from_gen = prediction_strips.__getitem__(i)[0] # getting og image
-#     features.append(encode(prediction_strips.__getitem__(i), batch_size)) #getting seg image
-#     features_index.append(prediction_strips.get_index(i))
-#     gc.collect()
-    
-csv = open(csvPath, "w")
 for i in range(prediction_strips.__len__()):
-    csv.write("{},{}\n".format(prediction_strips.get_index(i), encode(prediction_strips.__getitem__(i), batch_size)))
-    # gc.collect()
+# im_from_gen = prediction_strips.__getitem__(i)[0] # getting og image
+    features.append(encode(prediction_strips.__getitem__(i), batch_size)) #getting seg image
+    features_index.append(prediction_strips.get_index(i))
+    gc.collect()
     
-csv.close()
+# csv = open(csvPath, "w")
+# for i in range(prediction_strips.__len__()):
+#     csv.write("{},{}\n".format(prediction_strips.get_index(i), encode(prediction_strips.__getitem__(i), batch_size)))
+#     # gc.collect()
+    
+# csv.close()
 
 
 
