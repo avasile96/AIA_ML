@@ -28,3 +28,4 @@ How to use Gabor?
 - PCA (Flatten) to use this
 - and unflatten afterwards
 - starting from 32 channels would be too much
+
