@@ -14,7 +14,7 @@ import cv2
 import matplotlib.pyplot as plt
 import random
 from tensorflow import keras
-from keras.wrappers.scikit_learn import KerasClassifier
+from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.model_selection import GridSearchCV
 
 tf.debugging.set_log_device_placement(False)
@@ -77,13 +77,13 @@ class IrisImageDatabase(keras.utils.Sequence):
         i = idx * self.batch_size
         batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
         x = np.zeros((self.batch_size,) + self.img_size, dtype="float32")
-        y = x
+        # y = x
         for j, path in enumerate(batch_input_img_paths):
             img = io.imread(path, as_gray = True)
             x[j] = img
-            y[j] = img
-        return x, y
-        # return x
+            # y[j] = img
+        # return x, y
+        return x
     
 class PredictionData(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
@@ -123,9 +123,8 @@ train_strips = IrisImageDatabase(batch_size, img_size, strip_img_paths)
 
 
 #%% AUTOENCODER
-def create_autoencoder(img_size, number_of_channels, init_mode):
-    
-    inChannel = number_of_channels
+def create_autoencoder(init_mode = 'he_normal'):
+    inChannel = 1
     input_img = Input(shape = (img_size[0], img_size[1], inChannel), name = 'input_3')
     f = 4
     
@@ -177,10 +176,10 @@ def create_autoencoder(img_size, number_of_channels, init_mode):
     #########################################################
     up1 = UpSampling2D((2,2), name = 'up_sampling2d_4')(conv6) #160 x 120 x 2f
     conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_41',
-                   kernel_initializer = init_mode)(up1) #80 x 60 x 8f
+                    kernel_initializer = init_mode)(up1) #80 x 60 x 8f
     conv7 = BatchNormalization(name = 'batch_normalization_40')(conv7)
     conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_42',
-                   kernel_initializer = init_mode)(conv7)
+                    kernel_initializer = init_mode)(conv7)
     conv7 = BatchNormalization(name = 'batch_normalization_41')(conv7)
     conv8 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_43',
                    kernel_initializer = init_mode)(conv7) #80 x 60 x 4f
@@ -200,38 +199,40 @@ def create_autoencoder(img_size, number_of_channels, init_mode):
                      kernel_initializer = init_mode)(up3) # 320 x 240 x 1
     # define autoencoder model
     autoencoder = Model(input_img, decoded)
+    autoencoder.compile(optimizer='adam', loss='mse')
     return autoencoder
 
-autoencoder = create_autoencoder(img_size, number_of_channels=1, init_mode='he_normal')
-# compile autoencoder model
-autoencoder.compile(optimizer='adam', loss='mse')
-# set checkpoints
-checkpoint_filepath = 'autoencoder_weights.h5'
-model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-    filepath=checkpoint_filepath,
-    save_weights_only=False,
-    monitor='loss',
-    save_best_only=True)
+# autoencoder = create_autoencoder(img_size, number_of_channels=1, init_mode='he_normal')
+# # compile autoencoder model
+# autoencoder.compile(optimizer='adam', loss='mse')
+# # set checkpoints
+# checkpoint_filepath = 'autoencoder_weights.h5'
+# model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+#     filepath=checkpoint_filepath,
+#     save_weights_only=False,
+#     monitor='loss',
+#     save_best_only=True)
 # fit the autoencoder model to reconstruct input
 epochs = 10
 
 
-# # create model
-# model = KerasClassifier(build_fn=create_autoencoder, epochs=epochs, batch_size=batch_size, verbose=1)
-# # define the grid search parameters
-# init_mode = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
-# param_grid = dict(init_mode=init_mode)
-# grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
-# grid_result = grid.fit(train_strips, train_strips)
-# # summarize results
-# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# create model
+model = KerasRegressor(build_fn=create_autoencoder,
+                       epochs=epochs, batch_size=batch_size, verbose=1)
+# define the grid search parameters
+init = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
+param_grid = dict(init_mode=init)
+grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
+grid_result = grid.fit(train_strips, train_strips)
+# summarize results
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 
 
-history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = [],
-                          verbose=1)
-features = autoencoder.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
+# history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = [],
+#                           verbose=1)
+# features = autoencoder.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
 
-# features = model.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
+features = model.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
 
 plt.figure()
 io.imshow(train_strips.__getitem__(0)[0][0])

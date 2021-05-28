@@ -1,0 +1,17 @@
+DICE Score
+
+representation learning
+- embeded knn into the gridsearch
+
+knn 76.000 5 samples per subject
+
+Do the Classification
+
+ROC for deep learning - confidence score
+
+knn doesn't have confidence score
+
+ROC is only possible for the implementation with confidence score
+
+decidability index, error rate --> based on TN FN etc. counting
+
