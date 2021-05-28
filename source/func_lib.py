@@ -332,3 +332,82 @@ def GetPredInput(input_img_paths, batch_size, img_size, return_labels = False):
     input_img_paths = input_img_paths
     input_gen = PredictionData(batch_size, img_size, input_img_paths, return_labels = return_labels)
     return input_gen
+
+#%% AUTOENCODER
+def create_autoencoder(img_size, number_of_channels, init_mode):
+    
+    inChannel = number_of_channels
+    input_img = Input(shape = (img_size[0], img_size[1], inChannel), name = 'input_3')
+    f = 4
+    
+    conv1 = Conv2D(f, (3, 3), activation='relu', padding='same', name = 'conv1', 
+                   kernel_initializer = init_mode)(input_img) #320 x 240 x f
+    conv1 = BatchNormalization(name = 'batch_normalization_28')(conv1)
+    conv1 = Conv2D(f*2, (3, 3), activation='relu', padding='same', name = 'conv2d_30',
+                   kernel_initializer = init_mode)(conv1)
+    conv1 = BatchNormalization(name = 'batch_normalization_29')(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2), name = 'max_pooling2d_4')(conv1) #160 x 120 x 2f
+    conv2 = Conv2D(f*4, (3, 3), activation='relu', padding='same', name = 'conv2d_31',
+                   kernel_initializer = init_mode)(pool1) #160 x 120 x 4f
+    conv2 = BatchNormalization(name = 'batch_normalization_30')(conv2)
+    conv2 = Conv2D(f*4, (3, 3), activation='relu', padding='same', name = 'conv2d_32',
+                   kernel_initializer = init_mode)(conv2)
+    conv2 = BatchNormalization(name = 'batch_normalization_31')(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2), name = 'max_pooling2d_5')(conv2) #80 x 60 x 4f
+    conv3 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_33',
+                   kernel_initializer = init_mode)(pool2) #80 x 60 x 8f (small and thick)
+    conv3 = BatchNormalization(name = 'batch_normalization_32')(conv3)
+    conv3 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_34',
+                   kernel_initializer = init_mode)(conv3)
+    conv3 = BatchNormalization(name = 'batch_normalization_33')(conv3)
+    conv4 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_35',
+                   kernel_initializer = init_mode)(conv3) #80 x 60 x 16f (small and thick)
+    conv4 = BatchNormalization(name = 'batch_normalization_34')(conv4)
+    conv4 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_36',
+                   kernel_initializer = init_mode)(conv4)
+    conv4 = BatchNormalization(name = 'batch_normalization_35')(conv4)
+    pool3 = MaxPooling2D(pool_size=(2, 2), name = 'max_pooling2d_5')(conv2) #40 x 30 x 16f
+    ########################################################
+    conv5 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_31',
+                   kernel_initializer = init_mode)(pool3) #160 x 120 x 16f
+    conv5 = BatchNormalization(name = 'batch_normalization_36')(conv2)
+    conv5 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_32',
+                   kernel_initializer = init_mode)(conv2)
+    conv5 = BatchNormalization(name = 'batch_normalization_37')(conv2)
+    ########################################################
+    conv5_res = Reshape((-1,1))(conv5) # Feature Layer
+    conv5_shape = tuple(conv5.shape)    
+    conv6 = Reshape((conv5_shape[1], conv5_shape[2], conv5_shape[3]))(conv5_res)
+    ########################################################
+    conv6 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_37',
+                   kernel_initializer = init_mode)(conv6) #80 x 60 x 8f
+    conv6 = BatchNormalization(name = 'batch_normalization_38')(conv6)
+    conv6 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_38',
+                   kernel_initializer = init_mode)(conv6)
+    conv6 = BatchNormalization(name = 'batch_normalization_39')(conv6)
+    #########################################################
+    conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_37',
+                   kernel_initializer = init_mode)(conv5) #80 x 60 x 8f
+    conv7 = BatchNormalization(name = 'batch_normalization_40')(conv7)
+    conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_38',
+                   kernel_initializer = init_mode)(conv7)
+    conv7 = BatchNormalization(name = 'batch_normalization_41')(conv7)
+    conv8 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_39',
+                   kernel_initializer = init_mode)(conv7) #80 x 60 x 4f
+    conv8 = BatchNormalization(name = 'batch_normalization_42')(conv8)
+    conv8 = Conv2D(f*4, (3, 3), activation='relu', padding='same', name = 'conv2d_40',
+                   kernel_initializer = init_mode)(conv8)
+    conv8 = BatchNormalization(name = 'batch_normalization_43')(conv8)
+    up1 = UpSampling2D((2,2), name = 'up_sampling2d_4')(conv8) #160 x 120 x 2f
+    conv9 = Conv2D(f*2, (3, 3), activation='relu', padding='same', name = 'conv2d_41',
+                   kernel_initializer = init_mode)(up1) # 160 x 120 x 2f
+    conv9 = BatchNormalization(name = 'batch_normalization_44')(conv9)
+    conv9 = Conv2D(f, (3, 3), activation='relu', padding='same', name = 'conv2d_42',
+                   kernel_initializer = init_mode)(conv9)
+    conv9 = BatchNormalization(name = 'batch_normalization_45')(conv9)
+    up2 = UpSampling2D((2,2), name = 'up_sampling2d_5')(conv7) # 320 x 240 x f
+    decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same', name = 'conv2d_43',
+                     kernel_initializer = init_mode)(up2) # 320 x 240 x 1
+    # define autoencoder model
+    autoencoder = Model(input_img, decoded)
+    return autoencoder
