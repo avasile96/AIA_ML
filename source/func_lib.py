@@ -17,6 +17,114 @@ from skimage.transform import rescale, resize, downscale_local_mean
 import random
 import cv2
 
+tf.debugging.set_log_device_placement(True)
+
+
+img_size = (240, 320)
+num_classes = 2
+batch_size = 10
+
+source_dir = os.path.dirname(os.path.abspath(__name__))
+project_dir = os.path.dirname(source_dir)
+dataset_dir = os.path.join(project_dir, 'dataset')
+
+input_img_paths = []
+for patient_index in os.listdir(os.path.join(dataset_dir, 'images')):
+    if os.path.isdir(os.path.join(dataset_dir, 'images', patient_index)):
+        # patient_dir = os.path.join(dataset_dir, 'images', patient_index)
+        for fname in os.listdir(os.path.join(dataset_dir, 'images', patient_index)):
+            if fname.endswith(".bmp") and not fname.startswith("."):
+                input_img_paths.append(os.path.join(dataset_dir, 'images', patient_index, fname))
+
+target_img_paths = [
+        os.path.join(dataset_dir, 'groundtruth', fname)
+        for fname in os.listdir(os.path.join(dataset_dir, 'groundtruth'))
+        if fname.endswith(".tiff") and not fname.startswith(".")]
+
+class patient:
+    def __init__(self, index):
+        self.index = index
+
+def loadImages(path):
+    # return array of images from a directory (specified by "path")
+    imagesList = os.listdir(path)
+    loadedImages = []
+    for image in imagesList:
+        img = io.imread(os.path.join(path, image), as_gray = False)
+        loadedImages.append(img)
+    return loadedImages
+
+def downsample(img_arr, desired_dimesion = [224, 224]):
+    # Downsampling routine for stacks of images
+    # img arr = array of images to which you want to apply the downsampling
+    # desired_dimension = tuple of new dimension of the images
+    img_arr_ds = np.array([resize(image, desired_dimesion) for image in img_arr])
+    return img_arr_ds
+
+def create_patients(dataset_dir):
+    # create list of patients containing images from dataset
+    gt_dir = os.path.join(dataset_dir, 'groundtruth')
+    patients_dir = os.path.join(dataset_dir, 'images')
+    patients = []
+    for patient_index in os.listdir(patients_dir):
+        if os.path.isdir(os.path.join(patients_dir, patient_index)):
+            gt = []
+            p = patient(patient_index)
+            p.images = loadImages(os.path.join(patients_dir, patient_index))
+            for name in os.listdir(gt_dir):
+                if patient_index in name:
+                    gt.append(io.imread(os.path.join(gt_dir, name), as_gray = False))
+            p.ground_truth = gt
+            patients.append(p)
+    return patients
+
+def im_data_extract(list_of_patients):
+    # Extracting images from patients
+    # list_of_patients = list of patient objeccts
+    x_train = []
+    y_train = []
+    for patient in list_of_patients:
+        x_train.append(patient.images)
+        y_train.append(patient.ground_truth)
+        
+    x_train_arr = np.array([gray2rgb(image) for sublist in x_train for image in sublist])
+    y_train_arr = np.array([gray2rgb(image) for sublist in y_train for image in sublist])
+    
+    return x_train_arr, y_train_arr
+
+class IrisImageDatabase(keras.utils.Sequence):
+    """Helper to iterate over the data (as Numpy arrays)."""
+
+    def __init__(self, batch_size, img_size, input_img_paths, target_img_paths):
+        self.batch_size = batch_size
+        self.img_size = img_size
+        self.input_img_paths = input_img_paths
+        self.target_img_paths = target_img_paths
+
+    def __len__(self):
+        return len(self.target_img_paths) // self.batch_size
+
+    def __getitem__(self, idx):
+        """Returns tuple (input, target) correspond to batch #idx."""
+        i = idx * self.batch_size
+        batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
+        batch_target_img_paths = self.target_img_paths[i : i + self.batch_size]
+        # x = np.zeros((self.batch_size,) + self.img_size + (3,), dtype="float32")
+        x = np.zeros((self.batch_size,) + self.img_size, dtype="float32")
+        for j, path in enumerate(batch_input_img_paths):
+            # img = load_img(path, target_size=self.img_size)
+            img = io.imread(path, as_gray = True)
+            x[j] = img
+        # y = np.zeros((self.batch_size,) + self.img_size + (1,), dtype="uint8")
+        y = np.zeros((self.batch_size,) + self.img_size, dtype="uint8")
+        for j, path in enumerate(batch_target_img_paths):
+            img = load_img(path, target_size=self.img_size, color_mode="grayscale")
+            y[j] = img
+            # y[j] = np.expand_dims(img, 2)
+            # Ground truth labels are 1, 2, 3. Subtract one to make them 0, 1, 2:
+            y[j] = tf.math.divide(y[j],255)
+        return x, y
+
 class IrisImageDatabase(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
 
@@ -83,7 +191,7 @@ def mean_shift(ms_in):
     ms_img = cv2.cvtColor(ms_img, cv2.COLOR_BGR2GRAY)
     return ms_img
 
-def get_circles(img):
+def get_circles(img, prediction):
     """
     Circle defined as: x_center, y_center, radius
 

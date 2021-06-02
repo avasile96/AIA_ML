@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """
+
 Created on Mon May 10 23:36:53 2021
-This script uses resnet 50 to extract deep features from strip images
+This script uses a priprietary autoencoder to extract deep features from strip images.
+
+Variations on this architecture should be found in the autoencoders dir outside repository.
+
 @author: alex
 """
 
@@ -77,13 +81,13 @@ class IrisImageDatabase(keras.utils.Sequence):
         i = idx * self.batch_size
         batch_input_img_paths = self.input_img_paths[i : i + self.batch_size]
         x = np.zeros((self.batch_size,) + self.img_size, dtype="float32")
-        # y = x
+        y = x # (use for training autoencoder)
         for j, path in enumerate(batch_input_img_paths):
             img = io.imread(path, as_gray = True)
             x[j] = img
-            # y[j] = img
-        # return x, y
-        return x
+            y[j] = img # (use for training autoencoder)
+        return x, y # (use for training autoencoder)
+        # return x # use for encoder stuff?
     
 class PredictionData(keras.utils.Sequence):
     """Helper to iterate over the data (as Numpy arrays)."""
@@ -126,7 +130,7 @@ train_strips = IrisImageDatabase(batch_size, img_size, strip_img_paths)
 def create_autoencoder(init_mode = 'he_normal'):
     inChannel = 1
     input_img = Input(shape = (img_size[0], img_size[1], inChannel), name = 'input_3')
-    f = 4
+    f = 16
     
     conv1 = Conv2D(f, (3, 3), activation='relu', padding='same', name = 'conv1', 
                    kernel_initializer = init_mode)(input_img) #320 x 240 x f
@@ -154,29 +158,13 @@ def create_autoencoder(init_mode = 'he_normal'):
     conv4 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_36',
                    kernel_initializer = init_mode)(conv4)
     conv4 = BatchNormalization(name = 'batch_normalization_35')(conv4)
-    pool3 = MaxPooling2D(pool_size=(2, 2), name = 'max_pooling2d_6')(conv4) #40 x 30 x 16f
     ########################################################
-    conv5 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_37',
-                   kernel_initializer = init_mode)(pool3) #160 x 120 x 16f
-    conv5 = BatchNormalization(name = 'batch_normalization_36')(conv5)
-    conv5 = Conv2D(f*16, (3, 3), activation='relu', padding='same', name = 'conv2d_38',
-                   kernel_initializer = init_mode)(conv5)
-    conv5 = BatchNormalization(name = 'batch_normalization_37')(conv5)
-    ########################################################
-    conv5_res = Reshape((-1,1))(conv5) # Feature Layer
-    conv5_shape = tuple(conv5.shape)    
+    conv5_res = Reshape((-1,1))(conv4) # Feature Layer
+    conv5_shape = tuple(conv4.shape)    
     conv6 = Reshape((conv5_shape[1], conv5_shape[2], conv5_shape[3]))(conv5_res)
     ########################################################
-    conv6 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_39',
-                   kernel_initializer = init_mode)(conv6) #80 x 60 x 8f
-    conv6 = BatchNormalization(name = 'batch_normalization_38')(conv6)
-    conv6 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_40',
-                   kernel_initializer = init_mode)(conv6)
-    conv6 = BatchNormalization(name = 'batch_normalization_39')(conv6)
-    #########################################################
-    up1 = UpSampling2D((2,2), name = 'up_sampling2d_4')(conv6) #160 x 120 x 2f
     conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_41',
-                    kernel_initializer = init_mode)(up1) #80 x 60 x 8f
+                    kernel_initializer = init_mode)(conv6) #80 x 60 x 8f
     conv7 = BatchNormalization(name = 'batch_normalization_40')(conv7)
     conv7 = Conv2D(f*8, (3, 3), activation='relu', padding='same', name = 'conv2d_42',
                     kernel_initializer = init_mode)(conv7)
@@ -200,44 +188,52 @@ def create_autoencoder(init_mode = 'he_normal'):
     # define autoencoder model
     autoencoder = Model(input_img, decoded)
     autoencoder.compile(optimizer='adam', loss='mse')
-    return autoencoder
+    return autoencoder, f
 
-# autoencoder = create_autoencoder(img_size, number_of_channels=1, init_mode='he_normal')
-# # compile autoencoder model
-# autoencoder.compile(optimizer='adam', loss='mse')
-# # set checkpoints
-# checkpoint_filepath = 'autoencoder_weights.h5'
-# model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-#     filepath=checkpoint_filepath,
-#     save_weights_only=False,
-#     monitor='loss',
-#     save_best_only=True)
+autoencoder, f = create_autoencoder()
+# set checkpoints
+checkpoint_filepath = 'autoencoder_weights_f_{}.h5'.format(f) 
+model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    filepath=checkpoint_filepath,
+    save_weights_only=False,
+    monitor='loss',
+    save_best_only=True)
 # fit the autoencoder model to reconstruct input
-epochs = 10
+epochs = 20
 
 
-# create model
-model = KerasRegressor(build_fn=create_autoencoder,
-                       epochs=epochs, batch_size=batch_size, verbose=1)
-# define the grid search parameters
-init = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
-param_grid = dict(init_mode=init)
-grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
-grid_result = grid.fit(train_strips, train_strips)
-# summarize results
-print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# # create model
+# model = KerasRegressor(build_fn=create_autoencoder,
+#                        epochs=epochs, batch_size=batch_size, verbose=1)
+# # define the grid search parameters
+# init = ['uniform', 'lecun_uniform', 'normal', 'zero', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform']
+# param_grid = dict(init_mode=init)
+# grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=3)
+# grid_result = grid.fit(train_strips, train_strips)
+# # summarize results
+# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 
 
-# history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = [],
-#                           verbose=1)
-# features = autoencoder.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
+history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = model_checkpoint_callback,
+                          verbose=1)
+features = autoencoder.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
 
-features = model.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
+# features = model.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
 
 plt.figure()
 io.imshow(train_strips.__getitem__(0)[0][0])
+plt.xticks([])
+plt.yticks([])
+plt.title("Rectified Iris")
+plt.tight_layout()
+
 plt.figure()
 io.imshow(np.squeeze(features[0]))
+plt.xticks([])
+plt.yticks([])
+plt.title("U-Net Prediction")
+plt.tight_layout()
+
 # Model Save
 # autoencoder.save(
 #     'autoencoder.h5', overwrite=True, include_optimizer=True, save_format=None,
