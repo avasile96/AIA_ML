@@ -116,6 +116,8 @@ if __name__ == '__main__':
     # Train 
     history = model.fit(x=x_train, y=y_train, validation_data=(x_val,y_val), epochs=n_ep, verbose = 2, batch_size = batch_size)
     
+    a = model.predict(x_val)
+    
     #%% Plotting
     y_ax = np.linspace(0,100,len(history.history["accuracy"]), dtype = np.int)
     x_ax = np.linspace(0,n_ep,len(history.history["accuracy"]), dtype = np.int)

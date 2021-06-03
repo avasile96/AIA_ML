@@ -1,0 +1,21 @@
+Eyelid removal
+- in original space or in polar space?
+- k means clustering?
+	- nope, mean shift
+	- k means will force clustering
+	- clustering is unprobable
+	- grascale morphology, filtering, THEN clustering
+
+
+Convolve the 1 D profile of the arc of the iris
+with the derivative of the gaussian
+
+To find the discontinuity
+
+like running canny on the outer contour of the iris 
+(1st part) derrivative of gaussian = optimal edge deteection filter
+
+Area under ROC curve
+
+shuffle the images
+
