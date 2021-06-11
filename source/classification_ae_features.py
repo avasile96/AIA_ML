@@ -65,6 +65,18 @@ if __name__ == '__main__':
     y_train = np.array(y_train, dtype = np.int)
     y_val = np.array(y_val, dtype = np.int)
     
+    np.random.seed(42)
+    np.random.shuffle(x_train)
+    
+    np.random.seed(42)
+    np.random.shuffle(y_train)
+    
+    np.random.seed(69)
+    np.random.shuffle(x_val)
+    
+    np.random.seed(69)
+    np.random.shuffle(y_val)
+    
     plt.figure()
     io.imshow(y_train)
     plt.title('y_train')
@@ -82,30 +94,41 @@ if __name__ == '__main__':
     In this case, the closest power of 2 to 100352 is 256. The square root of 256
     is then 16, thus giving us our architecture definition.
     """
+    # model = Sequential()
+    # model.add(Dense(512, input_shape=(9600,), activation="relu"))
+    # model.add(tf.keras.layers.Dropout(0.2))
+    # model.add(Dense(225, activation="softmax"))
+    # loss_fn = tf.keras.losses.CategoricalCrossentropy()
+    
     model = Sequential()
-    model.add(Dense(512, input_shape=(9600,), activation="relu"))
+    model.add(Dense(100, input_shape=(9600,), activation="relu"))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(Dense(225, activation="softmax"))
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
 
     model.compile(loss=loss_fn, optimizer='adam', metrics=["accuracy"])
-    n_ep = 10
+    n_ep = 30
     # Train 
     history = model.fit(x=x_train, y=y_train, validation_data = (x_val, y_val), epochs=n_ep, verbose = 2, batch_size = batch_size)
     
     #%% Plotting
+    
+    # Training
     y_ax = np.linspace(0,100,len(history.history["accuracy"]), dtype = np.int)
     x_ax = np.linspace(0,n_ep,len(history.history["accuracy"]), dtype = np.int)
     
     plt.figure()
-    plt.plot(x_ax,np.array(history.history["loss"]))
+    lss, = plt.plot(x_ax,np.array(history.history["loss"]), label='Training Loss')
+    val_lss, = plt.plot(x_ax,np.array(history.history["val_loss"]), label='Validation Loss')
+    plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
     plt.title('Shallow Net Classification Loss')
     
     plt.figure()
-    plt.plot(x_ax,np.array(history.history["accuracy"])*100)
+    acc, = plt.plot(x_ax,np.array(history.history["accuracy"])*100, label='Training Accuracy')
+    val_acc, = plt.plot(x_ax,np.array(history.history["val_accuracy"])*100, label='Validation Accuracy')
+    plt.legend(handles=[acc, val_acc])
     plt.xlabel('epochs')
     plt.ylabel('[%]')
     plt.title('Shallow Net Classification Accuracy')
-    
     

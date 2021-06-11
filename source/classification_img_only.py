@@ -13,10 +13,12 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
 from tensorflow.keras.utils import to_categorical
 from unet_manual import create_patients
+
 
 tf.debugging.set_log_device_placement(True)
 
@@ -89,13 +91,25 @@ if __name__ == '__main__':
     y_train = np.array(y_train, dtype = np.int)
     y_val = np.array(y_val, dtype = np.int)
     
-    # plt.figure()
-    # io.imshow(y_train)
-    # plt.title('y_train')
+    np.random.seed(42)
+    np.random.shuffle(x_train)
     
-    # plt.figure()
-    # io.imshow(y_val)
-    # plt.title('y_val')
+    np.random.seed(42)
+    np.random.shuffle(y_train)
+    
+    np.random.seed(69)
+    np.random.shuffle(x_val)
+    
+    np.random.seed(69)
+    np.random.shuffle(y_val)
+    
+    plt.figure()
+    io.imshow(y_train)
+    plt.title('y_train')
+    
+    plt.figure()
+    io.imshow(y_val)
+    plt.title('y_val')
     
     del train_x, train_y
     gc.collect()

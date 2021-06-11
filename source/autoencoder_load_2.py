@@ -77,8 +77,8 @@ def encode(autoencoder_input, batch_size):
     
     init_mode = "he_normal"
     inChannel = 1
-    f = 4 # number of starting filters
-    naming_factor = 1 # counter for control over layer names
+    f = 4 # number of starting filters 
+    naming_factor = 1 # counter for control over layer names 
     
     input_img = Input(shape = (img_size[0], img_size[1], inChannel), name = 'input_3')
     
@@ -132,8 +132,4 @@ if __name__ == '__main__':
     features_d = np.squeeze(encode(prediction_strips, batch_size))
     
     strip_pred(prediction_strips, features_d, csvPath)
-
-
-
-
 
