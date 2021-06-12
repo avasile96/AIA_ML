@@ -75,7 +75,7 @@ if __name__ == '__main__':
     y_train = []
    
     x_val = [train_x[0]]
-    y_val = [train_y[0]]
+    y_val = [train_y[5]]
     
     for i in range(0,2250,10):
         print(i)

@@ -48,16 +48,16 @@ if __name__ == '__main__':
     x_train = []
     y_train = []
    
-    x_val = [train_x[0]]
-    y_val = [train_y[0]]
+    x_val = []
+    y_val = []
     
     for i in range(0,2250,10):
         print(i)
         x_train.extend(train_x[i:i+5])
         y_train.extend(train_y[i:i+5])
         
-        x_val.extend(train_x[i+6:i+11])
-        y_val.extend(train_y[i+6:i+11])
+        x_val.extend(train_x[i+5:i+10])
+        y_val.extend(train_y[i+5:i+10])
         
     x_train = np.array(x_train, dtype = np.float)
     x_val = np.array(x_val, dtype = np.float)
@@ -107,15 +107,24 @@ if __name__ == '__main__':
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
 
     model.compile(loss=loss_fn, optimizer='adam', metrics=["accuracy"])
-    n_ep = 30
+    n_ep = 100
+    
+    callbacks = [
+    # checkpointer,
+    tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss')
+    # tf.keras.callbacks.TensorBoard(log_dir='logs')
+    ]
+        
     # Train 
-    history = model.fit(x=x_train, y=y_train, validation_data = (x_val, y_val), epochs=n_ep, verbose = 2, batch_size = batch_size)
+    history = model.fit(x=x_train, y=y_train, validation_data = (x_val, y_val), 
+                        epochs=n_ep, verbose = 2, batch_size = batch_size,
+                        callbacks=callbacks)
     
     #%% Plotting
     
     # Training
     y_ax = np.linspace(0,100,len(history.history["accuracy"]), dtype = np.int)
-    x_ax = np.linspace(0,n_ep,len(history.history["accuracy"]), dtype = np.int)
+    x_ax = np.linspace(0,len(history.history["accuracy"]),len(history.history["accuracy"]), dtype = np.int)
     
     plt.figure()
     lss, = plt.plot(x_ax,np.array(history.history["loss"]), label='Training Loss')
