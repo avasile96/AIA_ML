@@ -124,6 +124,20 @@ class IrisImageDatabase(keras.utils.Sequence):
             y[j] = tf.math.divide(y[j],255)
         return x, y
 
+def ale_suffle(liist):
+    train = []
+    val = []
+    total = []
+    for i in range(0,2250,10):
+        np.random.seed(42+i)
+        a = liist[i:i+10]
+        np.random.shuffle(a)
+        total.extend(a)
+        train.extend(a[0:5])
+        val.extend(a[5:10])
+    
+    return train, val
+
 def get_model(img_size, num_classes):
     #Build the model
     IMG_HEIGHT = img_size[0]
@@ -191,79 +205,20 @@ def get_model(img_size, num_classes):
 
 if __name__ == '__main__':
     
-    #% VALIDATION SPLIT
-
     # Split our img paths into a training and a validation set
-    val_samples = int(len(target_img_paths)/2)
-
-    train_input_img_paths = []
-    train_target_img_paths = []
-   
-    val_input_img_paths = []
-    val_target_img_paths = []
-    
-    patient_input = []
-    patient_target = []
-    
-    
-    for i in range(0,2250,10):
-        print(i)
-        np.random.seed(42+i)
-        a = input_img_paths[i:i+10]
-        np.random.shuffle(a)
-        patient_input.extend(a)
-        train_input_img_paths.extend(a[0:5])
-        val_input_img_paths.extend(a[5:10])
-        
-        np.random.seed(42+i)
-        b = target_img_paths[i:i+10]
-        np.random.shuffle(b)
-        patient_target.extend(b)
-        train_target_img_paths.extend(b[0:5])
-        val_target_img_paths.extend(b[5:10])
-        
-
-    
-    ################ WORKS #####################
-    # for i in range(0,2250,10):
-    #     print(i)
-    #     train_input_img_paths.extend(input_img_paths[i:i+5])
-    #     train_target_img_paths.extend(target_img_paths[i:i+5])
-        
-    #     val_input_img_paths.extend(input_img_paths[i+5:i+10])
-    #     val_target_img_paths.extend(target_img_paths[i+5:i+10])
-        
-
-    # np.random.seed(42)
-    # np.random.shuffle(train_input_img_paths)
-    
-    # np.random.seed(42)
-    # np.random.shuffle(train_target_img_paths)
-    
-    # np.random.seed(69)
-    # np.random.shuffle(val_input_img_paths)
-    
-    # np.random.seed(69)
-    # np.random.shuffle(val_target_img_paths)
-    ############### WORKS ######################
-    
-
-
+    train_input_img_paths, val_input_img_paths = ale_suffle(input_img_paths)
+    train_target_img_paths, val_target_img_paths = ale_suffle(target_img_paths)
     
     # Instantiate data Sequences for each split
     train_gen = IrisImageDatabase(batch_size, img_size, train_input_img_paths, train_target_img_paths)
     val_gen = IrisImageDatabase(batch_size, img_size, val_input_img_paths, val_target_img_paths)
-    
-    # U Net
-    
+
     # Free up RAM in case the model definition cells were run multiple times
     keras.backend.clear_session()
     
-    # Build model
+    # Build model - UNet
     model = get_model(img_size, num_classes)
     model.summary()
-    
-    # opt = tf.keras.optimizers.Adam(clipnorm=1.0)
         
     model.compile(optimizer='adam', loss="binary_crossentropy", metrics = ['accuracy'])
     

@@ -21,6 +21,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import to_categorical
 import keras
 import csv
+from unet_manual_exp import ale_suffle
 
 tf.debugging.set_log_device_placement(True)
 
@@ -45,37 +46,28 @@ if __name__ == '__main__':
     train_y = to_categorical(np.array(train.index), 225)
     
     #%% 50-50 Split
-    x_train = []
-    y_train = []
-   
-    x_val = []
-    y_val = []
+    x_train, x_val = ale_suffle(train_x)
+    y_train, y_val = ale_suffle(train_y)
     
-    for i in range(0,2250,10):
-        print(i)
-        x_train.extend(train_x[i:i+5])
-        y_train.extend(train_y[i:i+5])
-        
-        x_val.extend(train_x[i+5:i+10])
-        y_val.extend(train_y[i+5:i+10])
-        
-    x_train = np.array(x_train, dtype = np.float)
-    x_val = np.array(x_val, dtype = np.float)
-    
-    y_train = np.array(y_train, dtype = np.int)
-    y_val = np.array(y_val, dtype = np.int)
-    
+    # additional shuffling routine to break the task structure appart
+    # we might run into the danger of the network learning the task structure
     np.random.seed(42)
     np.random.shuffle(x_train)
     
     np.random.seed(42)
     np.random.shuffle(y_train)
     
-    np.random.seed(69)
+    np.random.seed(13)
     np.random.shuffle(x_val)
     
-    np.random.seed(69)
+    np.random.seed(13)
     np.random.shuffle(y_val)
+    
+    x_train = np.array(x_train, dtype = np.float)
+    x_val = np.array(x_val, dtype = np.float)
+    
+    y_train = np.array(y_train, dtype = np.int)
+    y_val = np.array(y_val, dtype = np.int)
     
     plt.figure()
     io.imshow(y_train)
@@ -84,7 +76,10 @@ if __name__ == '__main__':
     plt.figure()
     io.imshow(y_val)
     plt.title('y_val')
-    del train, train_x, train_y
+    
+    del train_x, train_y
+    gc.collect()
+    
     
     #%% Shallow neural net
     """
@@ -101,7 +96,7 @@ if __name__ == '__main__':
     # loss_fn = tf.keras.losses.CategoricalCrossentropy()
     
     model = Sequential()
-    model.add(Dense(100, input_shape=(9600,), activation="relu"))
+    model.add(Dense(128, input_shape=(9600,), activation="relu"))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(Dense(225, activation="softmax"))
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
@@ -140,4 +135,10 @@ if __name__ == '__main__':
     plt.xlabel('epochs')
     plt.ylabel('[%]')
     plt.title('Shallow Net Classification Accuracy')
+    
+    print("The best Training Accuracy was {}".format(max(history.history["accuracy"])))
+    print("The best Validation Accuracy was {}".format(max(history.history["val_accuracy"])))
+    
+    print("The best Training Loss was {}".format(min(history.history["loss"])))
+    print("The best Validation Loss was {}".format(min(history.history["val_loss"])))
     
