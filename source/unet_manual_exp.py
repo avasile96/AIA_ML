@@ -17,7 +17,6 @@ from tensorflow.keras.preprocessing.image import load_img
 import keras
 from skimage.color import gray2rgb
 from skimage.transform import resize
-from sklearn.model_selection import StratifiedKFold
 
 
 tf.debugging.set_log_device_placement(True)
@@ -219,18 +218,28 @@ if __name__ == '__main__':
     # Build model - UNet
     model = get_model(img_size, num_classes)
     model.summary()
+    
+    MTRX =[tf.keras.metrics.AUC(curve = 'ROC', name = "auc"),
+           "accuracy",
+           tf.keras.metrics.TruePositives(name = "TP"),
+           tf.keras.metrics.TrueNegatives(name = "TN"),
+           tf.keras.metrics.FalsePositives(name = "FP"),
+           tf.keras.metrics.FalseNegatives(name = "FN"),
+           tf.keras.metrics.Precision(name = "prec"),
+           tf.keras.metrics.Recall(name = "rec")
+           ]
         
-    model.compile(optimizer='adam', loss="binary_crossentropy", metrics = ['accuracy'])
+    model.compile(optimizer='adam', loss="binary_crossentropy", metrics = MTRX)
     
     # import datetime
     # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-    #Modelcheckpoint
+    # Modelcheckpoint
     # checkpointer = tf.keras.callbacks.ModelCheckpoint('iris_unet.h5', verbose=1, save_best_only=True)
 
     callbacks = [
         # checkpointer,
-        tf.keras.callbacks.EarlyStopping(patience=2, monitor='val_loss')
+        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss')
         # tf.keras.callbacks.TensorBoard(log_dir='logs')
         ]
     
@@ -250,22 +259,116 @@ if __name__ == '__main__':
 
     #%% Plotting
     import matplotlib.pyplot as plt
-    
-    # Training
+
+    # Loss
     y_ax = np.linspace(0,100,len(hist.history["accuracy"]), dtype = np.int)
-    x_ax = np.linspace(0,epochs,len(hist.history["accuracy"]), dtype = np.int)
+    x_ax = np.linspace(0,len(hist.history["accuracy"]),len(hist.history["accuracy"]), dtype = np.int)
     
     plt.figure()
     lss, = plt.plot(x_ax,np.array(hist.history["loss"]), label='Training Loss')
     val_lss, = plt.plot(x_ax,np.array(hist.history["val_loss"]), label='Validation Loss')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('UNet Classification Loss')
+    plt.title('Shallow Net Classification Loss')
     
+    # Accuracy
     plt.figure()
     acc, = plt.plot(x_ax,np.array(hist.history["accuracy"])*100, label='Training Accuracy')
     val_acc, = plt.plot(x_ax,np.array(hist.history["val_accuracy"])*100, label='Validation Accuracy')
     plt.legend(handles=[acc, val_acc])
     plt.xlabel('epochs')
     plt.ylabel('[%]')
-    plt.title('UNet Classification Accuracy')
+    plt.title('Shallow Net Classification Accuracy')
+    
+    print("The best Training Accuracy was {}".format(max(hist.history["accuracy"])))
+    print("The best Validation Accuracy was {}".format(max(hist.history["val_accuracy"])))
+    
+    print("The best Training Loss was {}".format(min(hist.history["loss"])))
+    print("The best Validation Loss was {}".format(min(hist.history["val_loss"])))
+    
+    # print("The best Training Loss was {}".format(min(history.history["auc"])))
+    # print("The best Validation Loss was {}".format(min(history.history["val_auc"])))
+    
+    # F1
+    precision = np.array(hist.history["prec"], dtype = np.float)
+    recal = np.array(hist.history["rec"], dtype = np.float)
+    F1 = 2*(precision*recal/(precision+recal))
+    precision_val = np.array(hist.history["val_prec"], dtype = np.float)
+    recal_val = np.array(hist.history["val_rec"], dtype = np.float)
+    F1_val = 2*(precision_val*recal_val/(precision_val+recal_val))
+    
+    print("The best Training F1 was {}".format(np.mean(F1[-5:-1])))
+    print("The best Validation F1 was {}".format(np.mean(F1[-5:-1])))
+    
+    plt.figure()
+    lss, = plt.plot(x_ax, F1, label='Training F1')
+    val_lss, = plt.plot(x_ax, F1_val, label='Validation F1')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('epochs')
+    plt.title('Shallow Net Classification F1')
+    
+    # False Positive Rate FP/FP+TN
+    false_pos =  np.array(hist.history["FP"], dtype = np.float)
+    true_neg =  np.array(hist.history["TN"], dtype = np.float)
+    FPR = false_pos/(false_pos+true_neg)
+    
+    false_pos_val =  np.array(hist.history["val_FP"], dtype = np.float)
+    true_neg_val =  np.array(hist.history["val_TN"], dtype = np.float)
+    FPR_val = false_pos_val/(false_pos_val+true_neg_val)
+    
+    plt.figure()
+    lss, = plt.plot(x_ax, FPR, label='Training FPR')
+    val_lss, = plt.plot(x_ax, FPR_val, label='Validation FPR')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('epochs')
+    plt.title('Shallow Net Classification FPR')
+    
+    # True Positive Rate TP/TP+FN
+    true_pos =  np.array(hist.history["TP"], dtype = np.float)
+    false_neg =  np.array(hist.history["FN"], dtype = np.float)
+    TPR = true_pos/(true_pos+false_neg)
+    
+    ture_pos_val =  np.array(hist.history["val_TP"], dtype = np.float)
+    false_neg_val =  np.array(hist.history["val_FN"], dtype = np.float)
+    TPR_val = ture_pos_val/(ture_pos_val+false_neg_val)
+    
+    plt.figure()
+    lss, = plt.plot(x_ax, TPR, label='Training FPR')
+    val_lss, = plt.plot(x_ax, TPR_val, label='Validation FPR')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('epochs')
+    plt.title('Shallow Net Classification TPR')
+    
+    # ROC (TPR vs TPR)
+    plt.figure()
+    lss, = plt.plot(TPR , FPR, label='Training ROC')
+    val_lss, = plt.plot(TPR_val, FPR_val, label='Validation ROC')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('TPR')
+    plt.ylabel('FPR')
+    plt.title('Shallow Net Classification ROC')
+    
+    # False Negative Rate FN/FN+TP
+    FNR = false_neg/(true_pos+false_neg)
+    FNR_val = false_neg_val/(ture_pos_val+false_neg_val)
+    
+    plt.figure()
+    lss, = plt.plot(x_ax, FNR, label='Training FPR')
+    val_lss, = plt.plot(x_ax, FNR_val, label='Validation FPR')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('epochs')
+    plt.title('Shallow Net Classification TPR')
+    
+    # ROC (TPR vs FNR)
+    plt.figure()
+    lss, = plt.plot(FNR , FPR, label='Training ROC')
+    val_lss, = plt.plot(TPR_val, FPR_val, label='Validation ROC')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('FNR')
+    plt.ylabel('FPR')
+    plt.title('Shallow Net Classification ROC (TPR vs FNR)')
+    
+    
+    
+    
+    

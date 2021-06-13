@@ -100,8 +100,17 @@ if __name__ == '__main__':
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(Dense(225, activation="softmax"))
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
-
-    model.compile(loss=loss_fn, optimizer='adam', metrics=["accuracy"])
+    
+    MTRX =[tf.keras.metrics.AUC(curve = 'ROC', name = "auc"),
+           "accuracy",
+           tf.keras.metrics.TruePositives(name = "TP"),
+           tf.keras.metrics.TrueNegatives(name = "TN"),
+           tf.keras.metrics.FalsePositives(name = "FP"),
+           tf.keras.metrics.FalseNegatives(name = "FN"),
+           tf.keras.metrics.Precision(name = "prec"),
+           tf.keras.metrics.Recall(name = "rec")
+           ]
+    model.compile(loss=loss_fn, optimizer='adam', metrics=MTRX)
     n_ep = 100
     
     callbacks = [
@@ -115,7 +124,7 @@ if __name__ == '__main__':
                         epochs=n_ep, verbose = 2, batch_size = batch_size,
                         callbacks=callbacks)
     
-    #%% Plotting
+    #%% Plotting & Metrics
     
     # Training
     y_ax = np.linspace(0,100,len(history.history["accuracy"]), dtype = np.int)
@@ -141,4 +150,25 @@ if __name__ == '__main__':
     
     print("The best Training Loss was {}".format(min(history.history["loss"])))
     print("The best Validation Loss was {}".format(min(history.history["val_loss"])))
+    
+    # print("The best Training Loss was {}".format(min(history.history["auc"])))
+    # print("The best Validation Loss was {}".format(min(history.history["val_auc"])))
+    
+    precision = np.array(history.history["prec"], dtype = np.float)
+    recal = np.array(history.history["rec"], dtype = np.float)
+    
+    F1 = 2*(precision*recal/(precision+recal))
+    precision_val = np.array(history.history["val_prec"], dtype = np.float)
+    recal_val = np.array(history.history["val_rec"], dtype = np.float)
+    F1_val = 2*(precision_val*recal_val/(precision_val+recal_val))
+    
+    plt.figure()
+    lss, = plt.plot(x_ax, F1, label='Training F1')
+    val_lss, = plt.plot(x_ax, F1_val, label='Validation F1')
+    plt.legend(handles=[lss, val_lss])
+    plt.xlabel('epochs')
+    plt.title('Shallow Net Classification F1')
+    
+    
+    
     
