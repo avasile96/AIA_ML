@@ -231,20 +231,20 @@ if __name__ == '__main__':
         
     model.compile(optimizer='adam', loss="binary_crossentropy", metrics = MTRX)
     
-    # import datetime
-    # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    import datetime
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     # Modelcheckpoint
-    # checkpointer = tf.keras.callbacks.ModelCheckpoint('iris_unet.h5', verbose=1, save_best_only=True)
+    checkpointer = tf.keras.callbacks.ModelCheckpoint('iris_unet.h5', verbose=1, save_best_only=True)
 
     callbacks = [
-        # checkpointer,
-        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss')
-        # tf.keras.callbacks.TensorBoard(log_dir='logs')
+        checkpointer,
+        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss'),
+        tf.keras.callbacks.TensorBoard(log_dir='logs')
         ]
     
     # Train the model, doing validation at the end of each epoch.
-    epochs = 50
+    epochs = 200
     hist = model.fit(train_gen, epochs=epochs, validation_data=val_gen, callbacks=callbacks, batch_size = batch_size)
     # model.save(
     # 'iris_unet.h5', overwrite=True, include_optimizer=True, save_format=None,
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax,np.array(hist.history["val_loss"]), label='Validation Loss')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification Loss')
+    plt.title('UNet Segmentation Loss')
     
     # Accuracy
     plt.figure()
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     plt.legend(handles=[acc, val_acc])
     plt.xlabel('epochs')
     plt.ylabel('[%]')
-    plt.title('Shallow Net Classification Accuracy')
+    plt.title('UNet Segmentation Accuracy')
     
     print("The best Training Accuracy was {}".format(max(hist.history["accuracy"])))
     print("The best Validation Accuracy was {}".format(max(hist.history["val_accuracy"])))
@@ -298,14 +298,14 @@ if __name__ == '__main__':
     F1_val = 2*(precision_val*recal_val/(precision_val+recal_val))
     
     print("The best Training F1 was {}".format(np.mean(F1[-5:-1])))
-    print("The best Validation F1 was {}".format(np.mean(F1[-5:-1])))
+    print("The best Validation F1 was {}".format(np.mean(F1_val[-5:-1])))
     
     plt.figure()
     lss, = plt.plot(x_ax, F1, label='Training F1')
     val_lss, = plt.plot(x_ax, F1_val, label='Validation F1')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification F1')
+    plt.title('UNet Segmentation F1')
     
     # False Positive Rate FP/FP+TN
     false_pos =  np.array(hist.history["FP"], dtype = np.float)
@@ -321,7 +321,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax, FPR_val, label='Validation FPR')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification FPR')
+    plt.title('UNet Segmentation FPR')
     
     # True Positive Rate TP/TP+FN
     true_pos =  np.array(hist.history["TP"], dtype = np.float)
@@ -337,7 +337,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax, TPR_val, label='Validation FPR')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification TPR')
+    plt.title('UNet Segmentation TPR')
     
     # ROC (TPR vs TPR)
     plt.figure()
@@ -346,7 +346,7 @@ if __name__ == '__main__':
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('TPR')
     plt.ylabel('FPR')
-    plt.title('Shallow Net Classification ROC')
+    plt.title('UNet Segmentation ROC')
     
     # False Negative Rate FN/FN+TP
     FNR = false_neg/(true_pos+false_neg)
@@ -357,7 +357,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax, FNR_val, label='Validation FPR')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification TPR')
+    plt.title('UNet Segmentation TPR')
     
     # ROC (TPR vs FNR)
     plt.figure()
@@ -366,7 +366,7 @@ if __name__ == '__main__':
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('FNR')
     plt.ylabel('FPR')
-    plt.title('Shallow Net Classification ROC (TPR vs FNR)')
+    plt.title('UNet Segmentation ROC (TPR vs FNR)')
     
     
     

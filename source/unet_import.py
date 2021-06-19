@@ -89,74 +89,11 @@ def GetInputGenerator(input_img_paths, batch_size, img_size, return_labels = Fal
     else:
         return input_gen
 
-def stripTease(seg_img, center, max_radius): # TODO
+def stripT(seg_img, center, max_radius): # TODO
     flags = cv2.INTER_LINEAR + cv2.WARP_FILL_OUTLIERS
     final_strip = cv2.linearPolar(seg_img, center, max_radius, flags)
     return final_strip
 
-
-def get_model(img_size, num_classes):
-    #Build the model
-    IMG_HEIGHT = 240
-    IMG_WIDTH = 320
-    IMG_CHANNELS = 1
-    inputs = tf.keras.layers.Input((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS))
-    s = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
-    
-    #Contraction path
-    c1 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(s)
-    c1 = tf.keras.layers.Dropout(0.1)(c1)
-    c1 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c1)
-    p1 = tf.keras.layers.MaxPooling2D((2, 2))(c1)
-    
-    c2 = tf.keras.layers.Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p1)
-    c2 = tf.keras.layers.Dropout(0.1)(c2)
-    c2 = tf.keras.layers.Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c2)
-    p2 = tf.keras.layers.MaxPooling2D((2, 2))(c2)
-     
-    c3 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p2)
-    c3 = tf.keras.layers.Dropout(0.2)(c3)
-    c3 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c3)
-    p3 = tf.keras.layers.MaxPooling2D((2, 2))(c3)
-     
-    c4 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p3)
-    c4 = tf.keras.layers.Dropout(0.2)(c4)
-    c4 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c4)
-    p4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(c4)
-     
-    c5 = tf.keras.layers.Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p4)
-    c5 = tf.keras.layers.Dropout(0.3)(c5)
-    c5 = tf.keras.layers.Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c5)
-    
-    #Expansive path 
-    u6 = tf.keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c5)
-    u6 = tf.keras.layers.concatenate([u6, c4])
-    c6 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u6)
-    c6 = tf.keras.layers.Dropout(0.2)(c6)
-    c6 = tf.keras.layers.Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c6)
-     
-    u7 = tf.keras.layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(c6)
-    u7 = tf.keras.layers.concatenate([u7, c3])
-    c7 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u7)
-    c7 = tf.keras.layers.Dropout(0.2)(c7)
-    c7 = tf.keras.layers.Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c7)
-     
-    u8 = tf.keras.layers.Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(c7)
-    u8 = tf.keras.layers.concatenate([u8, c2])
-    c8 = tf.keras.layers.Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u8)
-    c8 = tf.keras.layers.Dropout(0.1)(c8)
-    c8 = tf.keras.layers.Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c8)
-     
-    u9 = tf.keras.layers.Conv2DTranspose(16, (2, 2), strides=(2, 2), padding='same')(c8)
-    u9 = tf.keras.layers.concatenate([u9, c1], axis=3)
-    c9 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u9)
-    c9 = tf.keras.layers.Dropout(0.1)(c9)
-    c9 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c9)
-     
-    outputs = tf.keras.layers.Conv2D(1, (1, 1), activation='sigmoid')(c9)
-     
-    model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
-    return model
 
 def polar_transform(im_from_gen, pred_of_im):
     """
@@ -214,32 +151,11 @@ def polar_transform(im_from_gen, pred_of_im):
     param2 = 2
     pupil_outline = cv2.HoughCircles(np.uint8(prediction*255), cv2.HOUGH_GRADIENT, 1, 5, param1=param1, param2=param2)
     
-    # while (pupil_outline is None):
-    #     param2 = param2-1
-    #     pupil_outline = cv2.HoughCircles(np.uint8(prediction*255), cv2.HOUGH_GRADIENT, 1, 5, param1=param1, param2=param2)
     
     while (pupil_outline.shape[1]>5):
         param2 = param2+1
         pupil_outline = cv2.HoughCircles(np.uint8(prediction*255), cv2.HOUGH_GRADIENT, 1, 5, param1=param1, param2=param2)
     
-    # for i in pupil_outline[0, :]:
-    #         # draw the outer circle
-    #         cv2.circle(og_color, (i[0], i[1]), i[2], (0, 255, 0), 2)
-    #         # draw the center of the circle
-    #         cv2.circle(og_color, (i[0], i[1]), 2, (0, 0, 255), 3)    
-    # for i in pupil_outline[0, :]:
-    #         # draw the outer circle
-    #         cv2.circle(og_color, (i[0], i[1]), i[2], (0, 255, 0), 2)
-    #         # draw the center of the circle
-    #         cv2.circle(og_color, (i[0], i[1]), 2, (0, 0, 255), 3) 
-    # f3 = plt.figure()
-    # f3.suptitle('circle_img')
-    # io.imshow(og_color)
-    # f3 = plt.figure()
-    # f3.suptitle('og_image')
-    # io.imshow(og_image)
-    
-    # pupil_outline = 
     
     center = (np.mean(np.squeeze(pupil_outline)[:,0]), np.mean(np.squeeze(pupil_outline)[:,1]))
 
@@ -247,7 +163,7 @@ def polar_transform(im_from_gen, pred_of_im):
     euc = []
     for i in cnt[0][:,:]:
         euc.append(distance.euclidean(i, center))
-    strip = stripTease(cut_image, center, np.max(np.array(euc)))
+    strip = stripT(cut_image, center, np.max(np.array(euc)))
     return strip
 
 def unet_seg(unet_input, batch_size):
@@ -307,8 +223,9 @@ if __name__ == '__main__':
         
     #     masks.append(img_from_seg)
         
-    #     mask_fname = '{}\\mask_{}.tiff'.format(mask_folder, i)
-    #     io.imsave(mask_fname, masks[i])
+    #     for j in range(10):
+    #                 mask_fname = '{}\\patient_{}_mask_{}.tiff'.format(mask_folder,pat_label[i], j+1)
+    #                 io.imsave(mask_fname, masks[i])
     
     #%% STRIP SAVING ROUTINE
     # strips = []

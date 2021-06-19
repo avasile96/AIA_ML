@@ -151,8 +151,10 @@ if __name__ == '__main__':
     print("The best Training Loss was {}".format(min(history.history["loss"])))
     print("The best Validation Loss was {}".format(min(history.history["val_loss"])))
     
-    # print("The best Training Loss was {}".format(min(history.history["auc"])))
-    # print("The best Validation Loss was {}".format(min(history.history["val_auc"])))
+    print("The Training AUC was {}".format(max(history.history["auc"])))
+    print("The Validation AUC was {}".format(np.mean(history.history["val_auc"])))
+    
+    print("The best Training Loss was {}".format(max(history.history["auc"])))
     
     precision = np.array(history.history["prec"], dtype = np.float)
     recal = np.array(history.history["rec"], dtype = np.float)

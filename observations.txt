@@ -1,0 +1,3 @@
+Use Precision/Recall curve to choose the threshold for the UNet segmentation
+
+add regularization as a feature in your nets
