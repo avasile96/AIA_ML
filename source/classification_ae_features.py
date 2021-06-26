@@ -24,7 +24,7 @@ from tensorflow.keras.utils import to_categorical
 import keras
 import csv
 from unet_manual_exp import ale_suffle
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, det_curve, multilabel_confusion_matrix
 from scipy import interp
 from itertools import cycle
 
@@ -42,6 +42,32 @@ big_file_dir = os.path.dirname(project_dir)
 dataset_dir = os.path.join(project_dir, 'dataset')
 strip_folder = os.path.join(source_dir, 'strips')
 db_path = project_dir+"\\deep_features.csv"
+
+def DI_calculation(y_test, y_pred, y_pred_prob):
+    gen_dis = []
+    imp_dis = []
+
+    for x in range(y_pred.shape[0]):
+        tt = y_test[x]
+        pp = y_pred[x]
+
+        if tt.all() == pp.all():
+            gen_dis.append(y_pred_prob[x][pp - 1])
+        else:
+            imp_dis.append(y_pred_prob[x][pp - 1])
+
+    norm_gen_dis = gen_dis / np.linalg.norm(gen_dis)
+    norm_imp_dis = imp_dis / np.linalg.norm(imp_dis)
+
+    mean_gen = np.mean(norm_gen_dis)
+    mean_imp = np.mean(norm_imp_dis)
+
+    std_gen = np.std(norm_gen_dis)
+    std_imp = np.std(norm_imp_dis)
+
+    DI = (abs(mean_imp - mean_gen)) / ((((std_gen * std_gen) + (std_imp * std_imp)) / 2) ** 0.5)
+
+    return DI
 
 
 if __name__ == '__main__':
@@ -102,8 +128,10 @@ if __name__ == '__main__':
     # loss_fn = tf.keras.losses.CategoricalCrossentropy()
     
     model = Sequential()
-    model.add(Dense(16, input_shape=(9600,), activation="relu"))
-    model.add(tf.keras.layers.Dropout(0.2))
+    model.add(Dense(8, input_shape=(9600,), activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.1)) #kernel_regularizer='l1'
+    model.add(Dense(8, activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.1))
     model.add(Dense(225, activation="softmax"))
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
     
@@ -122,7 +150,7 @@ if __name__ == '__main__':
     
     callbacks = [
     # checkpointer,
-    # tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss', mode='min', min_delta=0.1) # mostly out of time considerations
+    # tf.keras.callbacks.EarlyStopping(patience=10, monitor='val_loss', mode='min') # mostly out of time considerations
     # tf.keras.callbacks.TensorBoard(log_dir='logs')
     ]
         
@@ -131,8 +159,8 @@ if __name__ == '__main__':
                         validation_data=(x_val,y_val), 
                         epochs=n_ep, verbose = 2, 
                         batch_size = batch_size, 
-                        callbacks = callbacks,
-                        shuffle = True)
+                        # callbacks = callbacks,
+                        shuffle = False)
     
     y_val_pred = model.predict(x_val)
     y_train_pred = model.predict(x_train)
@@ -183,40 +211,55 @@ if __name__ == '__main__':
     # ROC (validation)
     fpr = dict()
     tpr = dict()
+    fpr_det = dict()
+    fnr_det = dict()
     roc_auc = dict()
+    
+    # Getting the fpr and tpr
     for i in range(num_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_train[i, :], y_train_pred[i, :])
+        fpr[i], tpr[i], _ = roc_curve(y_val[i, :], y_val_pred[i, :])
+        fpr_det[i], fnr_det[i], _ = det_curve(y_val[i, :], y_val_pred[i, :])
         roc_auc[i] = auc(fpr[i], tpr[i])
         
-    fpr["micro"], tpr["micro"], _ = roc_curve(y_train.ravel(), y_train_pred.ravel())
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_val.ravel(), y_val_pred.ravel())
+    fpr_det["micro"], fnr_det["micro"], _ = det_curve(y_val.ravel(), y_val_pred.ravel())
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
     
     # First aggregate all false positive rates
     all_fpr = np.unique(np.concatenate([fpr[i] for i in range(num_classes)]))
+    all_fpr_det = np.unique(np.concatenate([fpr_det[i] for i in range(num_classes)]))
     
     # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
     for i in range(num_classes):
         mean_tpr += interp(all_fpr, fpr[i], tpr[i])
     
+    mean_fnr_det = np.zeros_like(all_fpr_det)
+    for i in range(num_classes):
+        mean_fnr_det += interp(all_fpr_det, fpr_det[i], fnr_det[i])
+    
     # Finally average it and compute AUC
     mean_tpr /= num_classes
+    mean_fnr_det /= num_classes
     
     fpr["macro"] = all_fpr
     tpr["macro"] = mean_tpr
     roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
     
+    fpr_det["macro"] = all_fpr_det
+    fnr_det["macro"] = mean_fnr_det
+    
+    
     # Plot all ROC curves
     plt.figure()
     plt.plot(fpr["micro"], tpr["micro"],
              label='micro-average ROC curve (area = {0:0.2f})'
-                   ''.format(roc_auc["micro"]),
-             color='deeppink', linewidth=2)
+                   ''.format(roc_auc["micro"]),linewidth=2)
     
     plt.plot(fpr["macro"], tpr["macro"],
              label='macro-average ROC curve (area = {0:0.2f})'
-                   ''.format(roc_auc["macro"]),
-             color='navy', linewidth=2)
+                   ''.format(roc_auc["macro"]), linewidth=2)
+    
     lw = 2
     # colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
     # for i, color in zip(range(num_classes), colors):
@@ -235,17 +278,22 @@ if __name__ == '__main__':
     
     
     plt.figure()
-    lss, = plt.plot(fpr["micro"], label='FPR')
-    val_lss, = plt.plot(tpr["micro"], label='TPR')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('dunno')
-    plt.title('Shallow Net Classification')
-    
-    plt.figure()
     lss, = plt.plot(fpr["micro"],tpr["micro"], label='dunno')
     plt.legend(handles=[lss])
     plt.xlabel('dunno')
     plt.title('Shallow Net Classification')
     
+    # Plot all DET curves
+    plt.figure()
+    plt.plot(fpr_det["micro"], fnr_det["micro"],
+             label='micro-average DET curve')
+    
+    # Calculating EER
+    diff_vect = (fnr_det['micro'] - fpr_det['micro'])**2
+    min_diff_idx = np.where(diff_vect == np.min(diff_vect))
+    EER = fnr_det['micro'][min_diff_idx]
+    
+    # Calculating DI
+    DI_rf = DI_calculation(y_val, np.array(y_val_pred>0.5, dtype = np.int), y_val)
     
     
