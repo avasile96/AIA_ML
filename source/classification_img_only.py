@@ -47,12 +47,19 @@ def get_strips(strip_folder):
 
 def define_model():
     model = Sequential()
-    model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(320,240,1)))
+    model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(img_size[0],img_size[1],1)))
     model.add(MaxPooling2D((2, 2)))
-    # model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(MaxPooling2D((2, 2)))
+    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     # model.add(MaxPooling2D((2, 2)))
     # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-    model.add(MaxPooling2D((2, 2)))
+    # model.add(MaxPooling2D((2, 2)))
     model.add(Flatten())
     model.add(Dense(225, activation='softmax', kernel_initializer='he_uniform'))
     return model
@@ -121,7 +128,7 @@ if __name__ == '__main__':
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
     
     MTRX =[tf.keras.metrics.AUC(curve = 'ROC', name = "auc"),
-           "accuracy",
+           tf.keras.metrics.CategoricalAccuracy(name='c_accuracy'),
            tf.keras.metrics.TruePositives(name = "TP"),
            tf.keras.metrics.TrueNegatives(name = "TN"),
            tf.keras.metrics.FalsePositives(name = "FP"),
@@ -132,22 +139,27 @@ if __name__ == '__main__':
     
     callbacks = [
         # checkpointer,
-        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss')
+        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss', mode='min', min_delta=0.01) # mostly out of time considerations
         # tf.keras.callbacks.TensorBoard(log_dir='logs')
         ]
     
     model.compile(loss=loss_fn, optimizer='adam', metrics=MTRX)
 
-    n_ep = 10
+    n_ep = 200
     # Train 
-    history = model.fit(x=x_train, y=y_train, validation_data=(x_val,y_val), epochs=n_ep, verbose = 2, batch_size = batch_size, callbacks = callbacks)
+    history = model.fit(x=x_train, y=y_train, 
+                        validation_data=(x_val,y_val), 
+                        epochs=n_ep, verbose = 2, 
+                        batch_size = batch_size, 
+                        callbacks = callbacks,
+                        shuffle = True)
     
     a = model.predict(x_val)
     #%% Plotting & Metrics
     
-    # Training
-    y_ax = np.linspace(0,100,len(history.history["accuracy"]), dtype = np.int)
-    x_ax = np.linspace(0,len(history.history["accuracy"]),len(history.history["accuracy"]), dtype = np.int)
+    # Accuracy & Loss
+    y_ax = np.linspace(0,100,len(history.history["c_accuracy"]), dtype = np.int)
+    x_ax = np.linspace(0,len(history.history["c_accuracy"]),len(history.history["c_accuracy"]), dtype = np.int)
     
     plt.figure()
     lss, = plt.plot(x_ax,np.array(history.history["loss"]), label='Training Loss')
@@ -157,19 +169,20 @@ if __name__ == '__main__':
     plt.title('Shallow Net Classification Loss')
     
     plt.figure()
-    acc, = plt.plot(x_ax,np.array(history.history["accuracy"])*100, label='Training Accuracy')
-    val_acc, = plt.plot(x_ax,np.array(history.history["val_accuracy"])*100, label='Validation Accuracy')
+    acc, = plt.plot(x_ax,np.array(history.history["c_accuracy"])*100, label='Training Accuracy')
+    val_acc, = plt.plot(x_ax,np.array(history.history["val_c_accuracy"])*100, label='Validation Accuracy')
     plt.legend(handles=[acc, val_acc])
     plt.xlabel('epochs')
     plt.ylabel('[%]')
     plt.title('Shallow Net Classification Accuracy')
     
-    print("The best Training Accuracy was {}".format(max(history.history["accuracy"])))
-    print("The best Validation Accuracy was {}".format(max(history.history["val_accuracy"])))
+    print("The best Training Accuracy was {}".format(max(history.history["c_accuracy"])))
+    print("The best Validation Accuracy was {}".format(max(history.history["val_c_accuracy"])))
     
     print("The best Training Loss was {}".format(min(history.history["loss"])))
     print("The best Validation Loss was {}".format(min(history.history["val_loss"])))
     
+    # F1
     precision = np.array(history.history["prec"], dtype = np.float)
     recal = np.array(history.history["rec"], dtype = np.float)
     
@@ -235,7 +248,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax, FNR_val, label='Validation FPR')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification TPR')
+    plt.title('Shallow Net Classification FPR')
     
     # ROC (FPR vs FNR)
     plt.figure()
