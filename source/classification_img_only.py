@@ -3,6 +3,8 @@
 Created on Wed Jun  2 14:03:27 2021
 
 @author: alex
+
+This script performs recognition (classification) using strip images directly.
 """
 
 import os
