@@ -3,6 +3,8 @@
 Created on Tue May 11 23:41:36 2021
 
 @author: alex
+
+This script performs recognition (classification) using deep features.
 """
 
 import os

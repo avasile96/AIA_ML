@@ -3,6 +3,9 @@
 Created on Wed May 26 17:47:34 2021
 
 @author: alex
+
+This script extracts deep features from scripts using the autoencoder architecture
+
 """
 
 import os

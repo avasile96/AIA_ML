@@ -4,7 +4,7 @@ Created on Fri Apr 23 09:56:55 2021
 
 @author: alex
 
-This script imports the Unet and applies segmentation
+This script imports the Unet, applies segmentation and
 
 """
 

@@ -4,7 +4,7 @@ Created on Sat Jun 12 09:21:39 2021
 
 @author: alex
 
-UNET TRAINING
+Tris script performs UNET TRAINING
 """
 
 

@@ -2,6 +2,7 @@
 """
 
 Created on Mon May 10 23:36:53 2021
+
 This script uses a priprietary autoencoder to extract deep features from strip images.
 
 Variations on this architecture should be found in the autoencoders dir outside repository.
