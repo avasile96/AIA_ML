@@ -34,7 +34,7 @@ tf.debugging.set_log_device_placement(True)
 
 img_size = (240, 320)
 num_classes = 224
-batch_size = 64
+batch_size = 32
 
 source_dir = os.path.dirname(os.path.abspath(__name__))
 project_dir = os.path.dirname(source_dir)
@@ -51,10 +51,10 @@ def DI_calculation(y_test, y_pred, y_pred_prob):
         tt = y_test[x]
         pp = y_pred[x]
 
-        if tt.all() == pp.all():
-            gen_dis.append(y_pred_prob[x][pp - 1])
+        if (False in np.array(tt==pp)):
+            gen_dis.append(y_pred_prob[x])
         else:
-            imp_dis.append(y_pred_prob[x][pp - 1])
+            imp_dis.append(y_pred_prob[x])
 
     norm_gen_dis = gen_dis / np.linalg.norm(gen_dis)
     norm_imp_dis = imp_dis / np.linalg.norm(imp_dis)
@@ -129,9 +129,22 @@ if __name__ == '__main__':
     
     model = Sequential()
     model.add(Dense(8, input_shape=(9600,), activation="relu"))
-    model.add(tf.keras.layers.Dropout(0.1)) #kernel_regularizer='l1'
+    # model.add(tf.keras.layers.Dropout(0.1)) #kernel_regularizer='l1'
+    # model.add(tf.keras.layers.BatchNormalization())
+    # model.add(Dense(16, activation="relu"))
+    # model.add(tf.keras.layers.BatchNormalization())
+    # model.add(tf.keras.layers.Dropout(0.1))
     model.add(Dense(8, activation="relu"))
-    model.add(tf.keras.layers.Dropout(0.1))
+    # model.add(tf.keras.layers.Dropout(0.2))
+    # model.add(tf.keras.layers.BatchNormalization())
+    # model.add(Dense(8, activation="relu"))
+    model.add(Dense(8, activation="relu"))
+    # model.add(Dense(8, activation="relu"))
+    # model.add(tf.keras.layers.BatchNormalization())
+    # model.add(tf.keras.layers.Dropout(0.1))
+    # model.add(Dense(128, activation="relu"))
+    # model.add(tf.keras.layers.Dropout(0.1))
+    # model.add(tf.keras.layers.BatchNormalization())
     model.add(Dense(225, activation="softmax"))
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
     
@@ -150,7 +163,8 @@ if __name__ == '__main__':
     
     callbacks = [
     # checkpointer,
-    # tf.keras.callbacks.EarlyStopping(patience=10, monitor='val_loss', mode='min') # mostly out of time considerations
+    tf.keras.callbacks.EarlyStopping(patience=10, monitor='val_loss', mode='min'), # mostly out of time considerations
+    tf.keras.callbacks.ModelCheckpoint('df_class.h5', verbose=1, save_best_only=True),
     # tf.keras.callbacks.TensorBoard(log_dir='logs')
     ]
         
@@ -163,7 +177,7 @@ if __name__ == '__main__':
                         shuffle = False)
     
     y_val_pred = model.predict(x_val)
-    y_train_pred = model.predict(x_train)
+    # y_train_pred = model.predict(x_train)
     
     #%% Plotting & Metrics
     
@@ -232,11 +246,11 @@ if __name__ == '__main__':
     # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
     for i in range(num_classes):
-        mean_tpr += interp(all_fpr, fpr[i], tpr[i])
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
     
     mean_fnr_det = np.zeros_like(all_fpr_det)
     for i in range(num_classes):
-        mean_fnr_det += interp(all_fpr_det, fpr_det[i], fnr_det[i])
+        mean_fnr_det += np.interp(all_fpr_det, fpr_det[i], fnr_det[i])
     
     # Finally average it and compute AUC
     mean_tpr /= num_classes
@@ -272,28 +286,37 @@ if __name__ == '__main__':
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Some extension of Receiver operating characteristic to multi-class')
+    plt.title('Multi-class receiver operating characteristic curve')
     plt.legend(loc="lower right")
     plt.show()
     
     
     plt.figure()
-    lss, = plt.plot(fpr["micro"],tpr["micro"], label='dunno')
-    plt.legend(handles=[lss])
-    plt.xlabel('dunno')
-    plt.title('Shallow Net Classification')
+    vss, = plt.plot(fpr["micro"]*100, label='FPR')
+    lss, = plt.plot(tpr["micro"]*100, label='TPR')
+    plt.legend(handles=[vss, lss])
+    plt.xlabel('Epochs')
+    plt.ylabel('%')
+    plt.title('TPR & FPR')
     
     # Plot all DET curves
     plt.figure()
-    plt.plot(fpr_det["micro"], fnr_det["micro"],
+    lss, = plt.plot(fpr_det["micro"], fnr_det["micro"],
              label='micro-average DET curve')
+    plt.title('Detection error tradeoff curve')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('False Negative Rate')
+
+    plt.legend(handles=[lss])
     
     # Calculating EER
     diff_vect = (fnr_det['micro'] - fpr_det['micro'])**2
     min_diff_idx = np.where(diff_vect == np.min(diff_vect))
     EER = fnr_det['micro'][min_diff_idx]
+    print("The EER was {}".format(EER))
     
     # Calculating DI
-    DI_rf = DI_calculation(y_val, np.array(y_val_pred>0.5, dtype = np.int), y_val)
-    
+    y_val_pred_th = np.array(y_val_pred>0.5, dtype = np.int)
+    DI_rf = DI_calculation(y_val, y_val_pred_th, y_val_pred)
+    print("The DI was {}".format(DI_rf))
     
