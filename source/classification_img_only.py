@@ -21,7 +21,8 @@ from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
 from tensorflow.keras.utils import to_categorical
 from unet_manual import create_patients
 from unet_manual_exp import ale_suffle
-
+from classification_ae_features import DI_calculation
+from sklearn.metrics import roc_curve, auc, det_curve, multilabel_confusion_matrix
 
 tf.debugging.set_log_device_placement(True)
 
@@ -49,21 +50,21 @@ def get_strips(strip_folder):
 
 def define_model():
     model = Sequential()
-    model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(img_size[0],img_size[1],1)))
+    model.add(Conv2D(8, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(img_size[0],img_size[1],1)))
     model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     model.add(MaxPooling2D((2, 2)))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     # model.add(MaxPooling2D((2, 2)))
-    # model.add(Conv2D(1, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
+    # model.add(Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
     # model.add(MaxPooling2D((2, 2)))
     model.add(Flatten())
-    model.add(Dense(225, activation='softmax', kernel_initializer='he_uniform'))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(225, activation='softmax'))
     return model
 
 if __name__ == '__main__':
@@ -141,7 +142,7 @@ if __name__ == '__main__':
     
     callbacks = [
         # checkpointer,
-        tf.keras.callbacks.EarlyStopping(patience=5, monitor='val_loss', mode='min', min_delta=0.01) # mostly out of time considerations
+        # tf.keras.callbacks.EarlyStopping(patience=10, monitor='val_loss') # mostly out of time considerations
         # tf.keras.callbacks.TensorBoard(log_dir='logs')
         ]
     
@@ -156,7 +157,7 @@ if __name__ == '__main__':
                         callbacks = callbacks,
                         shuffle = True)
     
-    a = model.predict(x_val)
+    y_val_pred = model.predict(x_val)
     #%% Plotting & Metrics
     
     # Accuracy & Loss
@@ -200,65 +201,97 @@ if __name__ == '__main__':
     plt.xlabel('epochs')
     plt.title('Shallow Net Classification F1')
     
-    # False Positive Rate FP/FP+TN
-    false_pos =  np.array(history.history["FP"], dtype = np.float)
-    true_neg =  np.array(history.history["TN"], dtype = np.float)
-    FPR = false_pos/(false_pos+true_neg)
+    # ROC (validation)
+    fpr = dict()
+    tpr = dict()
+    fpr_det = dict()
+    fnr_det = dict()
+    roc_auc = dict()
     
-    false_pos_val =  np.array(history.history["val_FP"], dtype = np.float)
-    true_neg_val =  np.array(history.history["val_TN"], dtype = np.float)
-    FPR_val = false_pos_val/(false_pos_val+true_neg_val)
+    # Getting the fpr and tpr
+    for i in range(num_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_val[i, :], y_val_pred[i, :])
+        fpr_det[i], fnr_det[i], _ = det_curve(y_val[i, :], y_val_pred[i, :])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+        
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_val.ravel(), y_val_pred.ravel())
+    fpr_det["micro"], fnr_det["micro"], _ = det_curve(y_val.ravel(), y_val_pred.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+    
+    # First aggregate all false positive rates
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(num_classes)]))
+    all_fpr_det = np.unique(np.concatenate([fpr_det[i] for i in range(num_classes)]))
+    
+    # Then interpolate all ROC curves at this points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(num_classes):
+        mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+    
+    mean_fnr_det = np.zeros_like(all_fpr_det)
+    for i in range(num_classes):
+        mean_fnr_det += np.interp(all_fpr_det, fpr_det[i], fnr_det[i])
+    
+    # Finally average it and compute AUC
+    mean_tpr /= num_classes
+    mean_fnr_det /= num_classes
+    
+    fpr["macro"] = all_fpr
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+    
+    fpr_det["macro"] = all_fpr_det
+    fnr_det["macro"] = mean_fnr_det
+    
+    
+    # Plot all ROC curves
+    plt.figure()
+    plt.plot(fpr["micro"], tpr["micro"],
+             label='micro-average ROC curve (area = {0:0.2f})'
+                   ''.format(roc_auc["micro"]),linewidth=2)
+    
+    plt.plot(fpr["macro"], tpr["macro"],
+             label='macro-average ROC curve (area = {0:0.2f})'
+                   ''.format(roc_auc["macro"]), linewidth=2)
+    
+    lw = 2
+    # colors = cycle(['aqua', 'darkorange', 'cornflowerblue'])
+    # for i, color in zip(range(num_classes), colors):
+    #     plt.plot(fpr[i], tpr[i], color=color, lw=lw,
+    #              label='ROC curve of class {0} (area = {1:0.2f})'
+    #              ''.format(i, roc_auc[i]))
+    
+    plt.plot([0, 1], [0, 1], 'k--', lw=lw)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Some extension of Receiver operating characteristic to multi-class')
+    plt.legend(loc="lower right")
+    plt.show()
+    
     
     plt.figure()
-    lss, = plt.plot(x_ax, FPR, label='Training FPR')
-    val_lss, = plt.plot(x_ax, FPR_val, label='Validation FPR')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('epochs')
-    plt.title('Shallow Net Classification FPR')
+    vss, = plt.plot(fpr["micro"], label='FPR')
+    lss, = plt.plot(tpr["micro"], label='TPR')
+    plt.legend(handles=[vss, lss])
+    plt.xlabel('dunno')
+    plt.title('Shallow Net Classification')
     
-    # True Positive Rate TP/TP+FN
-    true_pos =  np.array(history.history["TP"], dtype = np.float)
-    false_neg =  np.array(history.history["FN"], dtype = np.float)
-    TPR = true_pos/(true_pos+false_neg)
-    
-    ture_pos_val =  np.array(history.history["val_TP"], dtype = np.float)
-    false_neg_val =  np.array(history.history["val_FN"], dtype = np.float)
-    TPR_val = ture_pos_val/(ture_pos_val+false_neg_val)
-    
+    # Plot all DET curves
     plt.figure()
-    lss, = plt.plot(x_ax, TPR, label='Training FPR')
-    val_lss, = plt.plot(x_ax, TPR_val, label='Validation FPR')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('epochs')
-    plt.title('Shallow Net Classification TPR')
+    lss, = plt.plot(fpr_det["micro"], fnr_det["micro"],
+             label='micro-average DET curve')
+
+    plt.legend(handles=[lss])
     
-    # ROC (TPR vs TPR)
-    plt.figure()
-    lss, = plt.plot(TPR , FPR, label='Training ROC')
-    val_lss, = plt.plot(TPR_val, FPR_val, label='Validation ROC')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('TPR')
-    plt.ylabel('FPR')
-    plt.title('Shallow Net Classification ROC')
+    # Calculating EER
+    diff_vect = (fnr_det['micro'] - fpr_det['micro'])**2
+    min_diff_idx = np.where(diff_vect == np.min(diff_vect))
+    EER = fnr_det['micro'][min_diff_idx]
+    print("The EER was {}".format(EER))
     
-    # False Negative Rate FN/FN+TP
-    FNR = false_neg/(true_pos+false_neg)
-    FNR_val = false_neg_val/(ture_pos_val+false_neg_val)
-    
-    plt.figure()
-    lss, = plt.plot(x_ax, FNR, label='Training FPR')
-    val_lss, = plt.plot(x_ax, FNR_val, label='Validation FPR')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('epochs')
-    plt.title('Shallow Net Classification FPR')
-    
-    # ROC (FPR vs FNR)
-    plt.figure()
-    lss, = plt.plot(FNR , FPR, label='Training ROC')
-    val_lss, = plt.plot(TPR_val, FPR_val, label='Validation ROC')
-    plt.legend(handles=[lss, val_lss])
-    plt.xlabel('FNR')
-    plt.ylabel('FPR')
-    plt.title('Shallow Net Classification ROC (TPR vs FNR)')
-    
+    # Calculating DI
+    y_val_pred_th = np.array(y_val_pred>0.5, dtype = np.int)
+    DI_rf = DI_calculation(y_val, y_val_pred_th, y_val_pred)
+    print("The DI was {}".format(DI_rf))
     
