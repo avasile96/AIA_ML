@@ -368,23 +368,23 @@ def create_custom_ae(init_mode = 'he_normal'):
 if __name__ == '__main__':
     
     # Training
-    autoencoder, f = create_custom_ae()
+    # autoencoder, f = create_custom_ae()
     
-    # set checkpoints
-    checkpoint_filepath = 'autoencoder_medium_weights_f_{}.h5'.format(f) 
-    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=checkpoint_filepath,
-        save_weights_only=False,
-        monitor='loss',
-        save_best_only=True)
-    # fit the autoencoder model to reconstruct input
-    epochs = 10
-    history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = model_checkpoint_callback,
-                              verbose=1)
+    # # set checkpoints
+    # checkpoint_filepath = 'autoencoder_medium_weights_f_{}.h5'.format(f) 
+    # model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+    #     filepath=checkpoint_filepath,
+    #     save_weights_only=False,
+    #     monitor='loss',
+    #     save_best_only=True)
+    # # fit the autoencoder model to reconstruct input
+    # epochs = 10
+    # history = autoencoder.fit(train_strips, batch_size=batch_size, epochs=epochs, callbacks = model_checkpoint_callback,
+    #                           verbose=1)
     
     # Prediction
     # ae_pred, f  = load_model()
-    ae_pred= load_model('autoencoder_medium_weights_f_{}.h5'.format(f) )
+    ae_pred= load_model('autoencoder_medium_weights_f_{}.h5'.format(4) ) #instead of 4 --> f
     ae_pred.compile(optimizer="adam", loss="mse", metrics = ['loss'])
     features = ae_pred.predict(train_strips.__getitem__(0)[0][0][np.newaxis])
     
