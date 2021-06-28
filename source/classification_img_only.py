@@ -169,7 +169,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax,np.array(history.history["val_loss"]), label='Validation Loss')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification Loss')
+    plt.title('Classification Loss')
     
     plt.figure()
     acc, = plt.plot(x_ax,np.array(history.history["c_accuracy"])*100, label='Training Accuracy')
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     plt.legend(handles=[acc, val_acc])
     plt.xlabel('epochs')
     plt.ylabel('[%]')
-    plt.title('Shallow Net Classification Accuracy')
+    plt.title('Classification Accuracy')
     
     print("The best Training Accuracy was {}".format(max(history.history["c_accuracy"])))
     print("The best Validation Accuracy was {}".format(max(history.history["val_c_accuracy"])))
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     val_lss, = plt.plot(x_ax, F1_val, label='Validation F1')
     plt.legend(handles=[lss, val_lss])
     plt.xlabel('epochs')
-    plt.title('Shallow Net Classification F1')
+    plt.title('Classification F1')
     
     # ROC (validation)
     fpr = dict()
@@ -265,22 +265,26 @@ if __name__ == '__main__':
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Some extension of Receiver operating characteristic to multi-class')
+    plt.title('Multi-class receiver operating characteristic curve')
     plt.legend(loc="lower right")
     plt.show()
     
     
     plt.figure()
-    vss, = plt.plot(fpr["micro"], label='FPR')
-    lss, = plt.plot(tpr["micro"], label='TPR')
+    vss, = plt.plot(fpr["micro"]*100, label='FPR')
+    lss, = plt.plot(tpr["micro"]*100, label='TPR')
     plt.legend(handles=[vss, lss])
-    plt.xlabel('dunno')
-    plt.title('Shallow Net Classification')
+    plt.xlabel('Epochs')
+    plt.ylabel('%')
+    plt.title('TPR & FPR')
     
     # Plot all DET curves
     plt.figure()
     lss, = plt.plot(fpr_det["micro"], fnr_det["micro"],
              label='micro-average DET curve')
+    plt.title('Detection error tradeoff curve')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('False Negative Rate')
 
     plt.legend(handles=[lss])
     
